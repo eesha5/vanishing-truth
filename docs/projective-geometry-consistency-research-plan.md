@@ -11,6 +11,8 @@
 4. [Untried Theoretical Models](#4-untried-theoretical-models)
 5. [Minimum Viable Version](#5-minimum-viable-version)
 6. [References](#6-references)
+7. [Execution Plan & Decisions (living section)](#7-execution-plan--decisions-living-section)
+8. [Plain-Language Glossary of the Constraint Levels](#8-plain-language-glossary-of-the-constraint-levels)
 
 ---
 
@@ -46,6 +48,11 @@ This project proposes a constraint-by-constraint, statistically calibrated evalu
 ### 2.3 Geometry in AI-generated video
 
 - **Grab-3D (arXiv 2512.13665, Dec 2025)** — uses vanishing-point-based representations as explicit 3D descriptors and checks their temporal consistency to detect generated video.
+
+### 2.3b Generation-side and multi-view work (to verify before citing)
+
+- **ControlVP (WACV 2026)** — reported to enforce consistent vanishing points *during* generation because generated buildings often contain incompatible VPs. Generation-side; we are evaluation-side, so complementary, and it confirms the community treats VP consistency as a known weakness.
+- **Epipolar-consistency work in novel-view synthesis** — diffusion models violate epipolar constraints / camera-pose consistency across views; epipolar losses are used to fix this. Requires two or more views, so it does not apply to single-image evaluation; cite as adjacent only.
 
 ### 2.4 "Do generative models understand 3D?"
 
@@ -256,3 +263,82 @@ Everything else (L4–L9, mitigation, psychophysics, remaining theoretical model
 - Hartley, R., & Zisserman, A. (2004). *Multiple View Geometry in Computer Vision* (2nd ed.). Cambridge University Press.
 
 > Some references are cited from memory; verify author lists, venues, and years before use.
+
+---
+
+## 7. Execution Plan & Decisions (living section)
+
+*Added 2026-09-20. Update as phases complete.*
+
+### 7.1 Framing
+
+Sarkar et al. (CVPR 2024) already established convincingly that generated images violate projective geometry, so "AI images break perspective" is **not** the claim. The paper is a **benchmark of geometric understanding**: *which camera constraints do modern generators actually satisfy, and does consistency degrade with spatial separation?* Headline contribution = the local-vs-global analysis (§3.5A, §4.4); the constraint-by-constraint diagnostic table and cross-generator comparison are the supporting contributions.
+
+This is a computer-vision project at its core: single-image projective geometry (line detection, vanishing points, camera calibration, shadow geometry) applied as a measurement instrument to generative models.
+
+### 7.2 Decisions taken
+
+| Decision | Choice | Why |
+|---|---|---|
+| Scope | Full §5 MVP, delivered in phases | Research paper is the goal; college "mini-project" is only the framing |
+| Generated images | Local SD 1.5 / SDXL on RTX 5060 (8 GB) + public corpora (GenImage, Sarkar et al. release) for closed models | No API budget; public corpora cover Midjourney/DALL·E/etc. |
+| Primary output | Per-constraint residual **vector** (failure profile); a single aggregate (e.g. FGD, §4.9) only as a headline convenience | One fused score would just be a worse classifier; diagnostics are the point |
+| Dataset scale | Stratified 3–5k images with ground-truth VPs on the real side, not 50k+ | Scale does not fix estimator noise; calibration does; many constraints only apply to specific scene types |
+| VP estimation | Unconstrained (no Manhattan/orthogonality prior) | If the estimator assumes a pinhole camera, L3 cannot test for one |
+| L2 summary statistic | Uncensored *capped mean* + length-weighted *unexplained fraction*, in addition to inlier RMS | Inlier RMS saturates at the inlier threshold (censoring); the capped mean is monotone in violation magnitude (verified synthetically) |
+| Thresholds for ✓/✗ tables | Derived from real-photo null distributions (a contrario / conformal), never hand-set | The hardest reviewer objection is "your detector is just worse on AI textures"; calibration is the answer |
+| Human-perception study (Gap 6) | **Follow-up paper**, not in scope for paper 1 | Needs ethics approval and a study design; see §7.5 |
+
+### 7.3 Phases (revised order: de-risk the headline early)
+
+| Phase | Content | Status |
+|---|---|---|
+| 1 | Geometry core: L2 + L3 on classical tools; synthetic scenes with known cameras; violation injectors (`jitter_directions` → L2, `shift_vp` → L3, `drift_vp` → locality); tests | **done 2026-09-20** |
+| 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | in progress |
+| 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | |
+| 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | |
+| 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | |
+| 5 | Locality analysis formalized: pairwise → windowed cameras → sheaf consistency radius (§4.4) | |
+| 6 | Blender injection suite (photoreal version of the Phase-1 synthetic tests, incl. shadows) → detection rate vs violation magnitude per level | |
+| 7 | Evaluation across generators, figures, writing | |
+
+### 7.4 The locality metric — definition and its known confound
+
+Three candidate definitions, increasing in rigor; all three will be reported:
+
+1. **Pairwise.** Two segments in the same VP cluster intersect at a "local VP"; measure its angular disagreement with the global VP as a function of the distance between the segments.
+2. **Windowed.** Estimate a full camera (VPs, f) inside sliding windows; disagreement between windows vs. window separation. Real photo → flat curve; generator → rising curve. The transition length scale is the quantity of interest (compare to patch size / attention span / VAE factor).
+3. **Sheaf consistency radius** (§4.4): the smallest perturbation that makes all local camera sections glue into one global section.
+
+**Confound to model explicitly:** nearby, nearly-parallel segments give ill-conditioned intersections, so estimator noise in (1) is *largest* at small separation and decreases with distance — opposite to the hypothesized trend. This makes a positive result conservative, but the real-image control curve must be shown, and the Phase-1 `drift_vp` injector verifies the metric recovers a known drift above that noise floor.
+
+### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
+
+If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
+
+### 7.6 Other follow-ups kept out of paper 1
+
+- Mitigation via differentiable L2–L3 residuals as rewards (§3.5E).
+- Mechanistic probes / activation patching for camera parameters (§4.10).
+- Denoising-time formation analysis (§3.5B).
+- Remaining levels L4–L6, L8–L9 and theoretical models §4.5–§4.9, §4.11.
+
+---
+
+## 8. Plain-Language Glossary of the Constraint Levels
+
+Each level is one rule a real pinhole camera cannot break. A residual is "how badly the rule is broken", in interpretable units.
+
+| Level | Rule in one sentence | Residual unit | Status |
+|---|---|---|---|
+| **L1 Straightness** | Straight edges in 3D stay straight in the photo (after removing lens distortion). | curvature (px) | later |
+| **L2 VP concurrency** | Lines that are parallel in 3D all meet at one vanishing point in the image. | degrees | **implemented** |
+| **L3 Camera coherence** | The three VPs of a room/building must correspond to three perpendicular 3D directions for *some* focal length; equivalently the image centre is the orthocentre of the VP triangle. | degrees from 90°, focal spread | **implemented** |
+| **L4 Horizon consistency** | All horizontal VPs lie on a single horizon line, which must agree with other horizon estimates (perspective field, object heights). | px / degrees | later |
+| **L5 Projective invariants** | Equally spaced things (fence posts, tiles) keep a fixed cross-ratio; repeated planar texture is related by one homography. | ratio error, px | later |
+| **L6 Conics** | Circles on one plane (plates on a table) become ellipses that share the same two "circular points" on that plane's horizon. | algebraic distance | later |
+| **L7 Shadows** | Lines from shadow points to the object points that cast them all converge to the light source's image (one sun → one point). | LP feasibility / degrees | MVP, phase 4 |
+| **L8 Reflections** | Lines joining points to their mirror reflections are parallel in 3D, so they converge to one VP. | degrees | later |
+| **L9 Cross-modal** | Plane normals derived from VPs must agree with normals from a monocular depth/normal network. | degrees | later |
+
+L2, L3 and L7 form the minimum viable paper (§5).
