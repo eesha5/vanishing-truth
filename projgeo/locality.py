@@ -207,7 +207,7 @@ def signed_residuals(segs: Segments, vp: np.ndarray) -> np.ndarray:
 
 def residual_variogram(segs: Segments, vpr: VPResult, width: int, height: int,
                        edges: np.ndarray, max_pairs_per_vp: int = 20000, seed: int = 0,
-                       cap_deg: float = 10.0) -> dict:
+                       cap_deg: float = 10.0, exclude_collinear: bool = True) -> dict:
     """Semivariogram of signed residuals over same-VP inlier pairs.
 
     gamma(d) = 1/2 E[(r_i - r_j)^2 | dist = d], normalised by the residual
@@ -218,10 +218,15 @@ def residual_variogram(segs: Segments, vpr: VPResult, width: int, height: int,
 
     Uses the *uncensored* nearest-VP assignment (every segment within
     `cap_deg` of its nearest VP) so that large, smooth drifts are not thrown
-    out by the tight inlier threshold used for VP estimation."""
+    out by the tight inlier threshold used for VP estimation.  Near-collinear
+    pairs (fragments of one physical edge: perpendicular distance < 6 px and
+    angle < 2 deg) are excluded because they share one residual by
+    construction and would inflate short-range correlation."""
     rng = np.random.default_rng(seed)
     diag = float(np.hypot(width, height))
     M = segs.midpoints
+    Ln = segs.lines
+    D = segs.directions
     dist, sq, var_w = [], [], []
     use_nearest = vpr.nearest is not None and vpr.residuals_all is not None
     for k, v in enumerate(vpr.vps):
@@ -243,8 +248,14 @@ def residual_variogram(segs: Segments, vpr: VPResult, width: int, height: int,
             ii = rng.integers(0, idx.size, max_pairs_per_vp)
             jj = rng.integers(0, idx.size, max_pairs_per_vp)
             keep = ii != jj; ii, jj = ii[keep], jj[keep]
-        dist.append(np.linalg.norm(M[idx[ii]] - M[idx[jj]], axis=1) / diag)
-        sq.append(0.5 * (r[ii] - r[jj]) ** 2 / var)
+        a, b = idx[ii], idx[jj]
+        keep = np.ones(a.size, bool)
+        if exclude_collinear:
+            pd = np.abs(np.sum(Ln[a][:, :2] * M[b], axis=1) + Ln[a][:, 2])
+            ang = np.degrees(np.arccos(np.clip(np.abs(np.sum(D[a] * D[b], axis=1)), 0, 1)))
+            keep = ~((pd < 6) & (ang < 2))
+        dist.append(np.linalg.norm(M[a][keep] - M[b][keep], axis=1) / diag)
+        sq.append(0.5 * (r[ii][keep] - r[jj][keep]) ** 2 / var)
     if not dist:
         nb = len(edges) - 1
         return {"gamma": np.full(nb, np.nan), "rho": np.full(nb, np.nan), "n_pairs": 0,

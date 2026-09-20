@@ -1,0 +1,131 @@
+"""Phase 3a pilot: real (YorkUrban) vs generated image sets, same pipeline.
+
+    python scripts/pilot_compare.py --gen data/generated/sdxl_pilot --out outputs/pilot
+
+Generated images are downscaled to YorkUrban's 640 px width by default so the
+detector sees comparable resolution (--no-match-res to disable).
+"""
+
+import argparse
+import json
+from pathlib import Path
+
+import cv2
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.stats import mannwhitneyu
+from tqdm import tqdm
+
+from projgeo.datasets.yorkurban import YorkUrban
+from projgeo.lines import detect_lsd
+from projgeo.pipeline import LOCALITY_EDGES, analyze_segments, flatten_report
+
+REAL = "real (YorkUrban)"
+METRICS = [
+    ("l2_capped_mean_deg", "L2 capped mean (deg)", "higher = worse"),
+    ("l2_unexplained_frac", "L2 unexplained fraction", "higher = worse"),
+    ("ortho_err_max_deg", "L3 ortho error max (deg)", "higher = worse"),
+    ("f_spread", "L3 focal spread", "higher = worse"),
+    ("loc_index", "Locality index (rho_near - rho_far)", "higher = more local"),
+    ("n_reliable_vps", "# reliable VPs", "lower = fewer coherent VPs"),
+    ("n_segments", "# LSD segments", "content-match check"),
+]
+
+
+def run_set(images, label, match_width=None):
+    rows, rhos = [], []
+    for name, img in tqdm(images, desc=label):
+        if match_width and img.shape[1] != match_width:
+            s = match_width / img.shape[1]
+            img = cv2.resize(img, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+        h, w = img.shape[:2]
+        rep = analyze_segments(detect_lsd(img), w, h)
+        row = flatten_report(rep)
+        row["path"] = name
+        row["set"] = label
+        rows.append(row)
+        rhos.append(rep["locality"]["rho"])
+    return pd.DataFrame(rows), np.array(rhos, dtype=float)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gen", nargs="+", required=True, help="generated image folders")
+    ap.add_argument("--real-root", default="data/real/YorkUrbanDB")
+    ap.add_argument("--out", default="outputs/pilot")
+    ap.add_argument("--no-match-res", action="store_true")
+    ap.add_argument("--limit", type=int, default=None)
+    args = ap.parse_args()
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    match_w = None if args.no_match_res else 640
+
+    ds = YorkUrban(args.real_root)
+    sets = {REAL: run_set([(im.name, im.image) for im in ds], "real", None)}
+    for g in args.gen:
+        files = sorted(p for p in Path(g).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
+        if args.limit:
+            files = files[:args.limit]
+        imgs = [(p.name, cv2.imread(str(p))) for p in files]
+        sets[Path(g).name] = run_set(imgs, Path(g).name, match_w)
+
+    df = pd.concat([d for d, _ in sets.values()], ignore_index=True)
+    df.to_csv(out / "summary.csv", index=False)
+    real = sets[REAL][0]
+
+    lines = ["| metric | " + " | ".join(sets) + " | MWU p (vs real) |",
+             "|---|" + "---|" * (len(sets) + 1)]
+    for key, label, note in METRICS:
+        cells, ps = [], []
+        for name, (d, _) in sets.items():
+            x = d[key].astype(float).dropna()
+            cells.append(f"{x.median():.3f} [{x.quantile(.25):.3f}, {x.quantile(.75):.3f}]")
+            if name != REAL:
+                p = mannwhitneyu(x, real[key].astype(float).dropna(), alternative="two-sided").pvalue
+                ps.append(f"{p:.2g}")
+        lines.append(f"| {label} ({note}) | " + " | ".join(cells) + " | " + ", ".join(ps) + " |")
+    for key in ("l2_capped_mean_deg", "ortho_err_max_deg", "loc_index"):
+        rn = np.sort(real[key].astype(float).dropna().values)
+        cells = []
+        for name, (d, _) in sets.items():
+            x = d[key].astype(float).dropna().values
+            pct = np.searchsorted(rn, x) / len(rn)
+            cells.append(f"{100 * (pct > 0.95).mean():.0f}% above real p95")
+        lines.append(f"| {key}: exceedance | " + " | ".join(cells) + " | |")
+    table = "\n".join(lines)
+    (out / "pilot_table.md").write_text(table)
+    print("\n" + table)
+
+    fig, axes = plt.subplots(2, 3, figsize=(14, 8))
+    for ax, (key, label, _) in zip(axes.ravel()[:5], METRICS[:5]):
+        for name, (d, _) in sets.items():
+            x = np.sort(d[key].astype(float).dropna().values)
+            ax.step(x, np.arange(1, len(x) + 1) / len(x), where="post", label=name)
+        ax.set_xlabel(label)
+        ax.set_ylabel("ECDF")
+        ax.grid(alpha=.3)
+        if key == "ortho_err_max_deg":
+            ax.set_xscale("log")
+    axes[0, 0].legend(fontsize=8)
+    ax = axes[1, 2]
+    centres = 0.5 * (LOCALITY_EDGES[1:] + LOCALITY_EDGES[:-1])
+    for name, (_, rho) in sets.items():
+        m = np.nanmean(rho, axis=0)
+        se = np.nanstd(rho, axis=0) / np.sqrt(np.isfinite(rho).sum(axis=0).clip(1))
+        ax.errorbar(centres, m, yerr=se, marker="o", ms=3, capsize=2, label=name)
+    ax.axhline(0, color="k", lw=.8)
+    ax.set_xlabel("segment separation / image diagonal")
+    ax.set_ylabel("residual correlation rho(d)")
+    ax.legend(fontsize=8)
+    ax.grid(alpha=.3)
+    fig.suptitle("Pilot: real vs generated under identical geometric tests")
+    fig.tight_layout()
+    fig.savefig(out / "pilot.png", dpi=110)
+    json.dump({k: {"n": int(len(d))} for k, (d, _) in sets.items()}, (out / "sets.json").open("w"))
+
+
+if __name__ == "__main__":
+    main()
