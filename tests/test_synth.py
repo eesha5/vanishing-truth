@@ -21,7 +21,7 @@ def _match_angles(sc, vps):
 @pytest.mark.parametrize("seed", SEEDS)
 def test_clean_scene_recovers_camera(seed):
     sc = make_scene(seed=seed)
-    rep = analyze_segments(sc.segs, sc.width, sc.height)
+    rep = analyze_segments(sc.segs, sc.width, sc.height, n_boot=0)
     assert rep["L3"]["n_vps"] == 3
     assert (_match_angles(sc, rep["_vp_result"].vps) < 0.5).all()
     assert abs(rep["L3"]["f_fit"] - sc.f) / sc.f < 0.03
@@ -44,14 +44,14 @@ def _sweep(fn, levels):
 def test_l2_residual_grows_with_jitter():
     def f(sc, sigma):
         segs = jitter_directions(sc.segs, sc.labels, 0, sigma, seed=1)
-        return analyze_segments(segs, sc.width, sc.height)["L2"]["all"]["capped_mean_deg"]
+        return analyze_segments(segs, sc.width, sc.height, n_boot=0)["L2"]["all"]["capped_mean_deg"]
     v = _sweep(f, [0, 1, 2, 4, 8])
     assert (np.diff(v) > 0).all(), v
 
 
 def test_l3_residual_grows_with_vp_shift_and_l2_does_not():
     def f(sc, shift):
-        rep = analyze_segments(shift_vp(sc, 2, np.array([shift, 0.0])), sc.width, sc.height)
+        rep = analyze_segments(shift_vp(sc, 2, np.array([shift, 0.0])), sc.width, sc.height, n_boot=0)
         return rep["L3"]["ortho_err_max_deg"], rep["L2"]["all"]["capped_mean_deg"]
     levels = [0, 100, 200, 400]
     out = np.array([[f(make_scene(seed=s), lv) for s in SEEDS[:3]] for lv in levels]).mean(axis=1)
@@ -64,6 +64,15 @@ def test_l3_residual_grows_with_vp_shift_and_l2_does_not():
 def test_locality_drift_raises_l2():
     def f(sc, drift):
         segs = drift_vp(sc, 2, np.array([drift, 0.0]))
-        return analyze_segments(segs, sc.width, sc.height)["L2"]["all"]["capped_mean_deg"]
+        return analyze_segments(segs, sc.width, sc.height, n_boot=0)["L2"]["all"]["capped_mean_deg"]
     v = _sweep(f, [0, 100, 200, 400])
     assert (np.diff(v) > 0).all(), v
+
+
+def test_bootstrap_uncertainty_small_on_clean_scene():
+    sc = make_scene(seed=0)
+    rep = analyze_segments(sc.segs, sc.width, sc.height, n_boot=20)
+    u = rep["L3"]["uncertainty"]
+    assert u["n_boot"] == 20
+    assert u["vp_std_max_deg"] < 1.0
+    assert rep["L3"]["n_reliable_vps"] == 3

@@ -192,3 +192,31 @@ def estimate_vps(segs: Segments, width: int, height: int, n_vps: int = 3,
                     support=support[order], thresh_deg=thresh_deg,
                     nearest=nearest, residuals_all=resid_all, lengths=segs.lengths,
                     meta={"width": width, "height": height})
+
+
+def bootstrap_vps(segs: Segments, vpr: VPResult, B: int = 30, seed: int = 0) -> np.ndarray:
+    """Resample each VP's inlier segments with replacement and re-refine.
+
+    Returns (B, K, 3) homogeneous VP samples in pixel coordinates.  The spread
+    of the samples measures how well the lines actually pin the VP down
+    (near-parallel families give VPs that slide along their direction), so
+    downstream residuals can be compared with their own uncertainty.
+    """
+    rng = np.random.default_rng(seed)
+    w, h = vpr.meta["width"], vpr.meta["height"]
+    T = normalizing_transform(w, h)
+    Tinv = np.linalg.inv(T)
+    S = segs.transformed(T)
+    K = len(vpr.vps)
+    out = np.zeros((B, K, 3))
+    for k in range(K):
+        idx = np.flatnonzero(vpr.labels == k)
+        v0 = unit(T @ vpr.vps[k])
+        if idx.size < 2:
+            out[:, k] = vpr.vps[k]
+            continue
+        for b in range(B):
+            bs = rng.choice(idx, size=idx.size, replace=True)
+            v = refine_vp(S[bs], v0, S.lengths[bs])
+            out[b, k] = unit(Tinv @ v)
+    return out

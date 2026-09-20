@@ -5,15 +5,32 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from .camera import l3_report
+from .camera import l3_report, l3_uncertainty
 from .lines import Segments, detect_lsd
-from .vp import VPResult, estimate_vps
+from .vp import VPResult, bootstrap_vps, estimate_vps
+
+# A VP counts as reliable when its inlier lines pin it down to better than
+# this (bootstrap angular std in ray space) and it explains at least this
+# fraction of total segment length.
+RELIABLE_VP_STD_DEG = 1.0
+RELIABLE_SUPPORT_FRAC = 0.05
 
 
-def analyze_segments(segs: Segments, width: int, height: int, **vp_kwargs) -> dict:
+def analyze_segments(segs: Segments, width: int, height: int, n_boot: int = 30,
+                     **vp_kwargs) -> dict:
     vpr: VPResult = estimate_vps(segs, width, height, **vp_kwargs)
     l2 = vpr.l2_summary()
     l3 = l3_report(vpr.vps, width, height)
+    if n_boot and len(vpr.vps):
+        samples = bootstrap_vps(segs, vpr, B=n_boot)
+        l3["uncertainty"] = l3_uncertainty(vpr.vps, samples, width, height, l3.get("f_fit"))
+        total = max(segs.lengths.sum(), 1e-9)
+        frac = vpr.support / total
+        rel = [(s < RELIABLE_VP_STD_DEG) and (fr >= RELIABLE_SUPPORT_FRAC)
+               for s, fr in zip(l3["uncertainty"]["vp_std_deg"], frac)]
+        l3["vp_support_frac"] = frac.tolist()
+        l3["vp_reliable"] = rel
+        l3["n_reliable_vps"] = int(sum(rel))
     return {
         "width": width, "height": height, "n_segments": len(segs),
         "vps": vpr.vps.tolist(),
@@ -46,6 +63,9 @@ def flatten_report(rep: dict) -> dict:
         "l2_capped_mean_deg": l2["all"].get("capped_mean_deg"),
     }
     for k in ("f_fit", "hfov_deg", "ortho_err_max_deg", "ortho_err_rms_deg",
-              "f_spread", "orthocenter_offset", "n_negative_f2"):
+              "f_spread", "orthocenter_offset", "n_negative_f2", "n_reliable_vps"):
         row[k] = l3.get(k)
+    u = l3.get("uncertainty", {})
+    for k in ("vp_std_max_deg", "ortho_err_max_boot_std", "ortho_err_max_boot_p95", "f_boot_cv"):
+        row[k] = u.get(k)
     return row

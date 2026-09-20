@@ -73,7 +73,7 @@ def detect_lsd(image: np.ndarray, min_length: float | None = None,
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     else:
         gray = image
-    lsd = cv2.createLineSegmentDetector(cv2.LSD_REFINE_ADV, scale=scale)
+    lsd = cv2.createLineSegmentDetector(cv2.LSD_REFINE_STD, scale=scale)
     out = lsd.detect(gray)[0]
     if out is None or len(out) == 0:
         return Segments(np.zeros((0, 4)))

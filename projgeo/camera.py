@@ -127,3 +127,39 @@ def l3_report(vps: np.ndarray, width: int, height: int) -> dict:
         rep["orthocenter_offset"] = None
     rep["status"] = "ok"
     return rep
+
+
+def l3_uncertainty(vps: np.ndarray, samples: np.ndarray, width: int, height: int,
+                   f: float | None = None) -> dict:
+    """Bootstrap uncertainty of the L3 residuals.
+
+    `samples` is (B, K, 3) from `vp.bootstrap_vps`.  Reports each VP's angular
+    std in ray space (at the fitted f) and the std / 95th percentile of the
+    ortho-error statistics over the bootstrap replicates.
+    """
+    pp = np.array([width / 2.0, height / 2.0])
+    diag = float(np.hypot(width, height))
+    if f is None:
+        f = fit_focal(vps, pp, diag)
+    r0 = vp_rays(vps, f, pp)
+    B, K, _ = samples.shape
+    vp_std = np.zeros(K)
+    for k in range(K):
+        rk = vp_rays(samples[:, k], f, pp)
+        ang = np.degrees(np.arccos(np.clip(np.abs(rk @ r0[k]), 0, 1)))
+        vp_std[k] = float(np.sqrt(np.mean(ang ** 2)))
+    boot_max, boot_rms, boot_f = [], [], []
+    if K >= 2:
+        for b in range(B):
+            fb = fit_focal(samples[b], pp, diag)
+            e = orthogonality_errors(samples[b], fb, pp)
+            boot_max.append(e.max()); boot_rms.append(np.sqrt((e ** 2).mean())); boot_f.append(fb)
+    boot_max = np.array(boot_max); boot_f = np.array(boot_f)
+    return {
+        "n_boot": int(B),
+        "vp_std_deg": vp_std.tolist(),
+        "vp_std_max_deg": float(vp_std.max()) if K else None,
+        "ortho_err_max_boot_std": float(boot_max.std()) if K >= 2 else None,
+        "ortho_err_max_boot_p95": float(np.percentile(boot_max, 95)) if K >= 2 else None,
+        "f_boot_cv": float(boot_f.std() / boot_f.mean()) if K >= 2 else None,
+    }
