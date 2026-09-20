@@ -294,7 +294,7 @@ This is a computer-vision project at its core: single-image projective geometry 
 | Phase | Content | Status |
 |---|---|---|
 | 1 | Geometry core: L2 + L3 on classical tools; synthetic scenes with known cameras; violation injectors (`jitter_directions` → L2, `shift_vp` → L3, `drift_vp` → locality); tests | **done 2026-09-20** |
-| 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | in progress |
+| 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | **YorkUrban done 2026-09-20** (see §7.7); HoliCity pending |
 | 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | |
 | 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | |
 | 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | |
@@ -311,6 +311,15 @@ Three candidate definitions, increasing in rigor; all three will be reported:
 3. **Sheaf consistency radius** (§4.4): the smallest perturbation that makes all local camera sections glue into one global section.
 
 **Confound to model explicitly:** nearby, nearly-parallel segments give ill-conditioned intersections, so estimator noise in (1) is *largest* at small separation and decreases with distance — opposite to the hypothesized trend. This makes a positive result conservative, but the real-image control curve must be shown, and the Phase-1 `drift_vp` injector verifies the metric recovers a known drift above that noise floor.
+
+### 7.7 Phase 2 results (YorkUrban, n = 102, 640×480)
+
+- **VP recovery** (LSD + unconstrained RANSAC): 81 % of GT VPs within 2°, 94 % within 5°. On the hand-labelled lines the estimator alone reaches 0.54° median error, so most of the gap is the detector / non-Manhattan clutter, not the estimator.
+- **Focal length**: median `f_fit / f_true` = 1.02 (IQR 0.99–1.05) from LSD lines, 1.00 on GT lines. The L3 machinery recovers the real camera.
+- **Null distributions** (`results/yorkurban_null_percentiles.json`): L2 capped mean p50 = 1.3°, p95 = 2.5°; unexplained fraction p50 = 17 %; L3 ortho error p50 = 0.7°, p90 = 6.8°, p95 = 64° (raw) → p90 = 1.6°, p95 = 2.8° when restricted to images with three *reliable* VPs (84/102).
+- **Two failure modes of the estimator, both now measured**: (i) *spurious third VP* from leftover clutter (cars, awnings) when the true third family is weak — ~10 % of images; (ii) *far-VP conditioning*: near-parallel families let the VP slide along their direction, which at f ≈ 675 px is several degrees in ray space. (ii) is captured by bootstrap uncertainty (`vp_std_deg`); (i) only partially (a self-consistent spurious cluster looks confident). Reliability flag: bootstrap std < 1° and support ≥ 5 % of line length.
+- **Implication for the benchmark**: the spurious-VP rate depends on line density and clutter, so generated images must be *content-matched* (§3.3) or L3 differences are confounded. Report "fraction of images with three reliable VPs" as its own statistic.
+- **Follow-ups**: better multi-model VP estimator (J-linkage / Gaussian-sphere accumulator) and DeepLSD lines to cut the spurious rate; HoliCity subset for higher-resolution real images (generated images will be 1024²; residual scaling with resolution must be checked).
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 

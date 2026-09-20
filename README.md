@@ -11,8 +11,9 @@ learned score.
 | Phase | Content | State |
 |---|---|---|
 | 1 | Geometry core: L2 (VP concurrency) + L3 (camera coherence), synthetic validation | done |
-| 2 | Real-image calibration (YorkUrban / HoliCity null distributions) | next |
-| 3 | Generated corpus (SD 1.5, SDXL local; public corpora for closed models) | |
+| 2 | Real-image calibration (YorkUrban done; HoliCity pending) | in progress |
+| 3a | Pilot: ~200 real vs ~200 SDXL, locality curve (go/no-go) | next |
+| 3b | Full generated corpus (SD 1.5, SDXL local; public corpora for closed models) | |
 | 4 | L7 shadows (wedge-constraint LP) | |
 | 5 | Locality analysis + sheaf consistency radius | |
 | 6 | Blender injection suite | |
@@ -50,3 +51,12 @@ injectors: `jitter_directions` (breaks L2 only), `shift_vp` (breaks L3 only,
 L2 untouched) and `drift_vp` (VP moves with image position — the
 "locally right, globally wrong" hypothesis). `tests/test_synth.py` checks
 clean recovery (VPs < 0.5°, f < 3 %) and monotone residual response.
+
+## Real-image calibration
+
+```bash
+python scripts/calibrate_yorkurban.py   # expects data/real/YorkUrbanDB (Elder Lab download)
+```
+
+Writes `outputs/yorkurban/{summary.csv,null_percentiles.json,ecdf.png,vp_accuracy.png}`.
+Headline numbers are in `results/` and �7.7 of the plan.
