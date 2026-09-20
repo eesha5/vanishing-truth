@@ -321,6 +321,23 @@ Three candidate definitions, increasing in rigor; all three will be reported:
 - **Implication for the benchmark**: the spurious-VP rate depends on line density and clutter, so generated images must be *content-matched* (§3.3) or L3 differences are confounded. Report "fraction of images with three reliable VPs" as its own statistic.
 - **Follow-ups**: better multi-model VP estimator (J-linkage / Gaussian-sphere accumulator) and DeepLSD lines to cut the spurious rate; HoliCity subset for higher-resolution real images (generated images will be 1024²; residual scaling with resolution must be checked).
 
+### 7.8 Locality metric: what survived validation (2026-09-20)
+
+Implemented in `projgeo/locality.py` and validated on synthetic scenes with known drift:
+
+| Candidate | Verdict |
+|---|---|
+| Pairwise two-line VP vs global VP | **Rejected as primary.** Dominated by conditioning: on clean scenes disagreement *falls* with distance (2° → 0.6°), and under drift the near bins *rise* because ill-conditioning amplifies small VP differences. |
+| Image-minus-"consistent twin" excess | Removes the conditioning confound (clean → 0) but absorbs drift into the matched noise level, leaving only a slope signature. Kept as secondary. |
+| **Signed-residual variogram** | **Primary.** ρ(d) = spatial correlation of signed angular residuals between same-VP segments at separation d. Independent noise → flat 0; random jitter → 0 (correctly *not* locality); drift → ρ > 0 near, ρ < 0 far. Locality index = ρ_near − ρ_far. Uses uncensored nearest-VP assignment (cap 10°) so large drifts are not thrown out. |
+
+**Key finding — real photos are not at zero.** YorkUrban gives a locality index of +0.26 (LSD pipeline) and +0.38 on the *hand-labelled* lines vs GT VPs, so it is in the photographs, not the pipeline. A single dataset-wide radial distortion fit (k₁ ≈ +0.06) halves it (0.39 → 0.19); the remainder is the world not being perfectly Manhattan (sub-families with their own VPs, spatially clustered). Consequences:
+
+1. The hypothesis test is **"generated > content-matched real"**, not "real = 0". Report the real-photo distribution alongside every generator.
+2. Lens distortion is a nuisance parameter: report the index raw and after a per-image radial-distortion fit.
+3. Collinear LSD fragments of one edge inflate short-range correlation (+0.05); exclude near-collinear pairs (perpendicular distance < 6 px and angle < 2°).
+4. The framing sharpens: *the world is only locally Manhattan — are generators more local than the world?*
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
