@@ -20,8 +20,11 @@ from scipy.stats import mannwhitneyu
 from tqdm import tqdm
 
 from projgeo.datasets.yorkurban import YorkUrban
+from projgeo.distortion import fit_radial_k1
 from projgeo.lines import detect_lsd
+from projgeo.locality import residual_variogram
 from projgeo.pipeline import LOCALITY_EDGES, analyze_segments, flatten_report
+from projgeo.vp import estimate_vps
 
 REAL = "real (YorkUrban)"
 METRICS = [
@@ -30,6 +33,8 @@ METRICS = [
     ("ortho_err_max_deg", "L3 ortho error max (deg)", "higher = worse"),
     ("f_spread", "L3 focal spread", "higher = worse"),
     ("loc_index", "Locality index (rho_near - rho_far)", "higher = more local"),
+    ("loc_index_undist", "Locality index, distortion-corrected", "higher = more local"),
+    ("k1", "Fitted radial distortion k1", "nuisance"),
     ("n_reliable_vps", "# reliable VPs", "lower = fewer coherent VPs"),
     ("n_segments", "# LSD segments", "content-match check"),
 ]
@@ -42,10 +47,20 @@ def run_set(images, label, match_width=None):
             s = match_width / img.shape[1]
             img = cv2.resize(img, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
         h, w = img.shape[:2]
-        rep = analyze_segments(detect_lsd(img), w, h)
+        segs = detect_lsd(img)
+        rep = analyze_segments(segs, w, h)
         row = flatten_report(rep)
         row["path"] = name
         row["set"] = label
+        if rep["L3"].get("f_fit") and len(rep["_vp_result"].vps):
+            fit = fit_radial_k1(segs, rep["_vp_result"], rep["L3"]["f_fit"], w, h)
+            vpr2 = estimate_vps(fit["segments"], w, h)
+            vg = residual_variogram(fit["segments"], vpr2, w, h, LOCALITY_EDGES)
+            row["k1"] = fit["k1"]
+            row["loc_index_undist"] = vg["rho_near"] - vg["rho_far"]
+        else:
+            row["k1"] = np.nan
+            row["loc_index_undist"] = np.nan
         rows.append(row)
         rhos.append(rep["locality"]["rho"])
     return pd.DataFrame(rows), np.array(rhos, dtype=float)
