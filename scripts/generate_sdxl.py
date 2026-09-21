@@ -30,7 +30,8 @@ def load_pipeline(name: str):
                                              use_safetensors=True, variant="fp16")
     # 8 GB card: keep only the active sub-model on the GPU
     pipe.enable_model_cpu_offload()
-    pipe.enable_vae_slicing()
+    if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+        pipe.vae.enable_slicing()
     pipe.set_progress_bar_config(disable=True)
     return pipe
 

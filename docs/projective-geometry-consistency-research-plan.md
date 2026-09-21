@@ -295,7 +295,7 @@ This is a computer-vision project at its core: single-image projective geometry 
 |---|---|---|
 | 1 | Geometry core: L2 + L3 on classical tools; synthetic scenes with known cameras; violation injectors (`jitter_directions` → L2, `shift_vp` → L3, `drift_vp` → locality); tests | **done 2026-09-20** |
 | 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | **YorkUrban done 2026-09-20** (see §7.7); HoliCity pending |
-| 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | |
+| 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | **done 2026-09-22 - GO** (see 7.9) |
 | 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | |
 | 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | |
 | 5 | Locality analysis formalized: pairwise → windowed cameras → sheaf consistency radius (§4.4) | |
@@ -337,6 +337,30 @@ Implemented in `projgeo/locality.py` and validated on synthetic scenes with know
 2. Lens distortion is a nuisance parameter: report the index raw and after a per-image radial-distortion fit.
 3. Collinear LSD fragments of one edge inflate short-range correlation (+0.05); exclude near-collinear pairs (perpendicular distance < 6 px and angle < 2°).
 4. The framing sharpens: *the world is only locally Manhattan — are generators more local than the world?*
+
+### 7.9 Phase 3a pilot results (2026-09-22): GO, with the hypothesis refined
+
+Setup: 102 YorkUrban photos vs 200 SDXL-base images (1024x768, 30 steps, CFG 6, prompts mirroring YorkUrban content, downscaled to 640 px for analysis). Identical pipeline. Content match confirmed: LSD segment counts do not differ (p = 0.13). Files: `results/pilot_sdxl_vs_yorkurban.{md,png}`, `results/pilot_summary.csv`.
+
+| Test | Real (median [IQR]) | SDXL | p (Mann-Whitney) |
+|---|---|---|---|
+| L2 concurrency, capped mean | 1.31 [1.04, 1.73] deg | 1.23 [0.87, 1.80] deg | 0.11 (n.s.) |
+| L3 orthogonality error (max pair) | 0.69 [0.46, 1.32] deg | 4.36 [1.39, 47.8] deg | 1.5e-17 |
+| L3, images with 3 reliable VPs only | 0.66 deg (n = 84, 82 %) | 2.88 deg (n = 93, 46 %) | 4e-14 |
+| L3 focal spread across VP pairs | 0.10 | 0.41 | 5e-14 |
+| Share above real p95 (L3) | 5 % | 22 % (51 % among 3-reliable-VP images) | |
+| Locality index (within-family variogram) | 0.16 | 0.18 | 0.33 (n.s.) |
+| Focal ratio left half / right half | 1.20 | 1.63 | 6e-6 |
+| Outdoor vs indoor L3 (SDXL) | | 13.6 deg vs 1.9 deg | |
+
+**Reading.**
+1. *Each family of parallel lines converges as well as in a real photo* (L2 identical). The generator has learned "lines that go together meet at a point".
+2. *The families do not share a camera* (L3). Half of the coherent SDXL images imply pairwise focal lengths that disagree by more than any real photo in the null; example `results/example_sdxl_0010_three_cameras.png` implies f = 1626 / 321 / 951 px from its three VP pairs. Only 46 % of SDXL Manhattan-prompted images even yield three reliable VPs (82 % real).
+3. *The inconsistency is between structures/regions, not a smooth drift within a family.* The signed-residual variogram - which detects spatially smooth VP drift within one line family - is indistinguishable from real photos. But cameras fitted to the left and right halves of an SDXL image disagree on f by 63 % (real: 20 %).
+
+**Refined hypothesis for the paper:** the unit of local consistency is a *structure* (a facade, a floor, a row of windows), each internally coherent; the generator lacks the global camera that ties structures together. "Locally right, globally wrong" holds at the level of structures and image regions, not of pixel-distance within a family. This is exactly what the sheaf formulation (4.4) models if sections are per-structure cameras rather than per-patch VPs.
+
+**Consequences for the plan.** Phase 5 should build the *windowed / per-structure camera* comparison (half-image focal ratio -> grid of cameras -> sheaf consistency radius) as the headline metric; keep the variogram as the negative control that rules out smooth drift. Phase 3b adds more generators; outdoor scenes are the sensitive stratum.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
