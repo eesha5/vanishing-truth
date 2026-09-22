@@ -125,23 +125,33 @@ def windowed_locality(segs: Segments, vpr: VPResult, f: float, width: int, heigh
 
 
 def consistent_twin(segs: Segments, vpr: VPResult, seed: int = 0,
-                    noise_deg: float | None = None) -> Segments:
+                    noise_deg: float | None = None, cap_deg: float = 10.0) -> Segments:
     """Conditioning-matched null: re-aim every inlier segment exactly at its
     global VP (same midpoint and length) and add angular noise matched to the
     image's own inlier residual level.  The twin has the same line layout as
     the image but satisfies the single-camera hypothesis by construction, so
     any locality statistic computed on image minus twin is free of the
-    conditioning confound.  Outliers are left untouched."""
+    conditioning confound.
+
+    Membership uses the *uncensored* nearest-VP assignment within `cap_deg`
+    (so lines that are inconsistent with the global camera are re-aimed too,
+    otherwise a generated image's twin keeps exactly its inconsistent lines);
+    the noise level comes from the tight inliers only.  Segments further than
+    `cap_deg` from every VP are left untouched."""
     rng = np.random.default_rng(seed)
     xy = segs.xy.copy()
     mid = segs.midpoints
     L = segs.lengths
+    use_nearest = vpr.nearest is not None and vpr.residuals_all is not None
     for k, v in enumerate(vpr.vps):
-        m = vpr.labels == k
+        if use_nearest:
+            m = (vpr.nearest == k) & (vpr.residuals_all < cap_deg)
+        else:
+            m = vpr.labels == k
         if not m.any():
             continue
         if noise_deg is None:
-            r = vpr.residuals[m]
+            r = vpr.residuals[vpr.labels == k]
             sigma = float(np.sqrt(np.nanmean(r ** 2))) if np.isfinite(r).any() else 0.5
         else:
             sigma = noise_deg

@@ -7,7 +7,7 @@ import numpy as np
 
 from .camera import l3_report, l3_uncertainty
 from .lines import Segments, detect_lsd
-from .locality import residual_variogram
+from .locality import consistent_twin, residual_variogram
 from .regional import regional_cameras
 from .vp import VPResult, bootstrap_vps, estimate_vps
 
@@ -45,6 +45,13 @@ def analyze_segments(segs: Segments, width: int, height: int, n_boot: int = 30,
         reg = {k: r[k] for k in ("n_windows", "rot_pairwise_deg", "rot_adjacent_deg",
                                  "logf_pairwise", "radius_rot_deg", "radius_logf")}
         reg["_rot_vs_dist"] = r.get("rot_vs_dist")
+        # Noise floor: the same segments re-aimed at the global VPs (one
+        # camera by construction, same layout and line counts per window).
+        twin = consistent_twin(segs, vpr, seed=0)
+        rt = regional_cameras(twin, vpr, l3["f_fit"], width, height)
+        for k in ("logf_pairwise", "radius_logf", "rot_pairwise_deg", "radius_rot_deg"):
+            reg[f"{k}_twin"] = rt[k]
+            reg[f"{k}_excess"] = (r[k] - rt[k]) if np.isfinite(r[k]) and np.isfinite(rt[k]) else np.nan
     return {
         "width": width, "height": height, "n_segments": len(segs),
         "vps": vpr.vps.tolist(),
@@ -83,7 +90,8 @@ def flatten_report(rep: dict) -> dict:
     row["loc_index"] = loc.get("index"); row["loc_rho_near"] = loc.get("rho_near"); row["loc_rho_far"] = loc.get("rho_far")
     reg = rep.get("regional", {})
     for k in ("n_windows", "rot_pairwise_deg", "rot_adjacent_deg", "logf_pairwise",
-              "radius_rot_deg", "radius_logf"):
+              "radius_rot_deg", "radius_logf", "logf_pairwise_twin", "logf_pairwise_excess",
+              "radius_logf_twin", "radius_logf_excess", "rot_pairwise_deg_excess", "radius_rot_deg_excess"):
         row[f"reg_{k}"] = reg.get(k)
     u = l3.get("uncertainty", {})
     for k in ("vp_std_max_deg", "ortho_err_max_boot_std", "ortho_err_max_boot_p95", "f_boot_cv"):
