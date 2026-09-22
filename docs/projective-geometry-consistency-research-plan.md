@@ -449,6 +449,23 @@ Real photographs were taken by cameras, so 71 % "no camera" on Commons is **esti
 
 Among acute-triangle SDXL images the implied HFOV is 25 deg (telephoto-like) and 47 % have the implied principal point more than a quarter-diagonal off centre - both consistent with "each structure gets its own camera" (7.9), but only interpretable once the estimator is trustworthy.
 
+### 7.14 VP significance: what was tried and what it taught (2026-09-22)
+
+Goal (7.13 item 1): cut the "no camera exists" rate on wild real photos without touching generated images. Three attempts, 80 images per set:
+
+| Attempt | Result |
+|---|---|
+| **Permutation null** (`vp.permutation_null`): compare each VP's support with RANSAC on the same lines with directions permuted (same layout, same orientation histogram, no convergence) | Does not separate: spurious VPs on YorkUrban still have z ~ 4-5. They are *genuinely concurrent* lines - real 3D directions that are simply not orthogonal to the other two (roof pitches, diagonal streets, a second facade). Kept as opt-in (`n_perm`). |
+| **Best-triple model selection** (`camera.select_manhattan_triple`, plan 4.6): up to 5 candidate VPs, pick the triple most consistent with one camera | YorkUrban 91 % pass the real-null threshold (2.8 deg); SDXL 50 %, SD 1.5 42 %, **Commons 27 %**. Support-gating the triple makes Commons *worse* (strongly supported triples still fail, median 27-45 deg). |
+| **Atlanta focal consistency** (`camera.atlanta_focal_consistency`): vertical VP found by direction only; every horizontal VP must give the same f with it | Orders the sets: impossible-pair rate YorkUrban 18 % < Commons 48 % < SD 1.5 57 % ~ SDXL 54 %; log-f spread 0.13 < 0.38 < 0.30 / 0.55. Applies to Atlanta worlds, but the wild-real vs generated gap is small. |
+
+Visual inspection of the failing Commons images settles it: e.g. `outputs/commons_bad_100038573.png` is a curved street with two facades - two horizontal VPs that are *legitimately* non-orthogonal plus verticals. **The three-VP camera test is only defined for scenes with three visible orthogonal directions; on uncurated content its failure is an applicability failure, not an estimator failure and not a photo failure.** Cropping, shift-lens / software perspective correction (common on Commons architecture photos) add a second, independent violation of the centred-principal-point assumption.
+
+**Decisions.**
+1. The paper's L3 experiment is **content-controlled by construction**: prompts that guarantee three visible directions (corridors, room corners, street corners) vs a real set curated the same way (YorkUrban qualifies; a diverse-camera curated set still needs building - hand-select ~100 Commons images with three visible directions, or use a horizon/VP dataset of internet photos). Wild Commons stays as the *wild* reference with the applicability caveat.
+2. Pipeline now reports three L3 variants: top-3 (`L3`), best-triple (`L3_best`), Atlanta (`L3_atlanta`); `pilot_compare.py` includes them.
+3. VP-estimator improvement is demoted from top priority: the estimator is adequate on Manhattan content (81 % GT VPs within 2 deg); the limit is the test's applicability. DeepLSD / J-linkage remain nice-to-have.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
