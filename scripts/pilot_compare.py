@@ -46,6 +46,7 @@ METRICS = [
     ("k1", "Fitted radial distortion k1", "nuisance"),
     ("n_reliable_vps", "# reliable VPs", "lower = fewer coherent VPs"),
     ("n_segments", "# LSD segments", "content-match check"),
+    ("hfov_deg", "Fitted HFOV (deg)", "camera configuration"),
 ]
 
 
@@ -78,6 +79,9 @@ def run_set(images, label, match_width=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--gen", nargs="+", required=True, help="generated image folders")
+    ap.add_argument("--real-extra", nargs="*", default=[], help="additional real-photo folders")
+    ap.add_argument("--hfov-band", nargs=2, type=float, default=[40, 60],
+                    help="second table restricted to fitted HFOV in this band (deg)")
     ap.add_argument("--real-root", default="data/real/YorkUrbanDB")
     ap.add_argument("--out", default="outputs/pilot")
     ap.add_argument("--no-match-res", action="store_true")
@@ -89,6 +93,12 @@ def main():
 
     ds = YorkUrban(args.real_root)
     sets = {REAL: run_set([(im.name, im.image) for im in ds], "real", None)}
+    for g in args.real_extra:
+        files = sorted(p for p in Path(g).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
+        if args.limit:
+            files = files[:args.limit]
+        imgs = [(p.name, cv2.imread(str(p))) for p in files]
+        sets["real-" + Path(g).name] = run_set(imgs, "real-" + Path(g).name, match_w)
     for g in args.gen:
         files = sorted(p for p in Path(g).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
         if args.limit:
@@ -100,26 +110,40 @@ def main():
     df.to_csv(out / "summary.csv", index=False)
     real = sets[REAL][0]
 
-    lines = ["| metric | " + " | ".join(sets) + " | MWU p (vs real) |",
-             "|---|" + "---|" * (len(sets) + 1)]
-    for key, label, note in METRICS:
-        cells, ps = [], []
-        for name, (d, _) in sets.items():
-            x = d[key].astype(float).dropna()
-            cells.append(f"{x.median():.3f} [{x.quantile(.25):.3f}, {x.quantile(.75):.3f}]")
-            if name != REAL:
-                p = mannwhitneyu(x, real[key].astype(float).dropna(), alternative="two-sided").pvalue
-                ps.append(f"{p:.2g}")
-        lines.append(f"| {label} ({note}) | " + " | ".join(cells) + " | " + ", ".join(ps) + " |")
-    for key in ("l2_capped_mean_deg", "ortho_err_max_deg", "reg_radius_rot_deg", "reg_radius_logf", "loc_index"):
-        rn = np.sort(real[key].astype(float).dropna().values)
-        cells = []
-        for name, (d, _) in sets.items():
-            x = d[key].astype(float).dropna().values
-            pct = np.searchsorted(rn, x) / len(rn)
-            cells.append(f"{100 * (pct > 0.95).mean():.0f}% above real p95")
-        lines.append(f"| {key}: exceedance | " + " | ".join(cells) + " | |")
-    table = "\n".join(lines)
+    def build_table(frames, title):
+        real_f = frames[REAL]
+        lines = [f"### {title}", "",
+                 "| metric | " + " | ".join(f"{k} (n={len(v)})" for k, v in frames.items()) + " | MWU p (vs real) |",
+                 "|---|" + "---|" * (len(frames) + 1)]
+        for key, label, note in METRICS:
+            cells, ps = [], []
+            for name, d in frames.items():
+                x = d[key].astype(float).dropna()
+                if len(x) == 0:
+                    cells.append("-")
+                    continue
+                cells.append(f"{x.median():.3f} [{x.quantile(.25):.3f}, {x.quantile(.75):.3f}]")
+                if name != REAL and len(real_f[key].dropna()) > 0:
+                    p = mannwhitneyu(x, real_f[key].astype(float).dropna(), alternative="two-sided").pvalue
+                    ps.append(f"{p:.2g}")
+            lines.append(f"| {label} ({note}) | " + " | ".join(cells) + " | " + ", ".join(ps) + " |")
+        for key in ("l2_capped_mean_deg", "ortho_err_max_deg", "reg_radius_rot_deg", "reg_radius_logf", "loc_index"):
+            rn = np.sort(real_f[key].astype(float).dropna().values)
+            if len(rn) == 0:
+                continue
+            cells = []
+            for name, d in frames.items():
+                x = d[key].astype(float).dropna().values
+                pct = np.searchsorted(rn, x) / len(rn)
+                cells.append(f"{100 * (pct > 0.95).mean():.0f}% above real p95")
+            lines.append(f"| {key}: exceedance | " + " | ".join(cells) + " | |")
+        return "\n".join(lines)
+
+    frames = {k: d for k, (d, _) in sets.items()}
+    table = build_table(frames, "All images")
+    lo, hi = args.hfov_band
+    band = {k: d[(d.hfov_deg >= lo) & (d.hfov_deg <= hi)] for k, d in frames.items()}
+    table += "\n\n" + build_table(band, f"Fitted HFOV in [{lo:.0f}, {hi:.0f}] deg (matched camera configuration)")
     (out / "pilot_table.md").write_text(table)
     print("\n" + table)
 
