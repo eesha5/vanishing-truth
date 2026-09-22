@@ -429,6 +429,26 @@ Real photos converge to a single camera as the window grows (3 % focal disagreem
 4. Regional focal disagreement: Commons 0.33, SD 1.5 0.48, SDXL 0.63 (YorkUrban 0.21) - generators still worst, but the real-set dependence is again large. Twin-excess: Commons 0.12, SD 1.5 0.19, SDXL 0.19, borderline.
 5. The within-family variogram remains null for every set - smooth spatial drift is not the failure mode for any generator or real set.
 
+### 7.13 Principal-point-free L3 (2026-09-22): the estimator, not the photos
+
+`scripts/l3_ppfree.py`, 80 images per set, images with three reliable VPs only. With the principal point free, a pinhole camera exists iff the VP triangle is acute.
+
+| | YorkUrban | Commons (wild real) | SD 1.5 | SDXL |
+|---|---|---|---|---|
+| n with 3 reliable VPs | 64 | 41 | 41 | 36 |
+| obtuse triangle (no camera for any pp) | 12 % | **71 %** | 51 % | 53 % |
+| acute: implied HFOV (median) | 51 deg | 65 deg | 59 deg | 25 deg |
+| acute: implied pp offset > 0.25 diag | 4 % | 25 % | 40 % | 47 % |
+
+Real photographs were taken by cameras, so 71 % "no camera" on Commons is **estimator failure on uncurated content** (spurious third VPs from clutter, non-Manhattan scenes, rectified facades with two VPs at infinity), not photo geometry. On wild content the estimator error swamps any generator signal; the reliability flag (bootstrap std + support) does not catch self-consistent spurious clusters.
+
+**Re-prioritisation.**
+1. VP *significance* is now the top engineering task: a contrario NFA with a structured background model, J-linkage / T-linkage multi-model fitting, or a Gaussian-sphere accumulator with a Manhattan-*agnostic* significance test; plus better lines (DeepLSD) if installable. Success criterion: obtuse-triangle rate on Commons drops toward YorkUrban's 12 % without touching generated images' rate.
+2. Real-set curation must be explicit and mirrored on the generated side: the paper reports (a) a curated Manhattan set (YorkUrban) and (b) a wild set, both with the same selection rule applied to generated images, and states the selection rate per set as a result in itself.
+3. Until (1) is done, the defensible headline is the YorkUrban-vs-generated comparison on Manhattan-prompted images, with the caveat that the generated sets are less Manhattan than YorkUrban (46 % vs 82 % three-reliable-VP rate).
+
+Among acute-triangle SDXL images the implied HFOV is 25 deg (telephoto-like) and 47 % have the implied principal point more than a quarter-diagonal off centre - both consistent with "each structure gets its own camera" (7.9), but only interpretable once the estimator is trustworthy.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.

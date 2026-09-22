@@ -19,6 +19,8 @@ learned score.
 | 6 | Blender injection suite | |
 | 7 | Evaluation & paper | |
 
+See `docs/HANDOFF.md` for the current state, findings and next steps.
+
 ## Usage
 
 ```bash
