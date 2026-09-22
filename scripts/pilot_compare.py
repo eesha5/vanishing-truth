@@ -30,6 +30,9 @@ REAL = "real (YorkUrban)"
 METRICS = [
     ("l2_capped_mean_deg", "L2 capped mean (deg)", "higher = worse"),
     ("l2_unexplained_frac", "L2 unexplained fraction", "higher = worse"),
+    ("l3best_ortho_err_max_deg", "L3 best-triple ortho error (deg)", "model selection over 5 VPs"),
+    ("atl_frac_impossible", "Atlanta: impossible (h, v) pairs fraction", "higher = worse"),
+    ("atl_logf_spread", "Atlanta: log-f spread across horizontals", "higher = worse"),
     ("ortho_err_max_deg", "L3 ortho error max (deg)", "higher = worse"),
     ("f_spread", "L3 focal spread", "higher = worse"),
     ("reg_radius_rot_deg", "Regional camera radius: rotation (deg)", "higher = no global camera"),

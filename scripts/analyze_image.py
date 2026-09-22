@@ -7,7 +7,20 @@ import argparse
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+
+
+def _json_default(o):
+    if isinstance(o, (np.integer,)):
+        return int(o)
+    if isinstance(o, (np.floating,)):
+        return float(o)
+    if isinstance(o, (np.bool_,)):
+        return bool(o)
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    return str(o)
 
 from projgeo.pipeline import analyze_image, flatten_report
 from projgeo.viz import plot_report
@@ -29,7 +42,7 @@ def main():
         rows.append(row)
         stem = Path(p).stem
         public = {k: v for k, v in rep.items() if not k.startswith("_")}
-        (out / f"{stem}.json").write_text(json.dumps(public, indent=1))
+        (out / f"{stem}.json").write_text(json.dumps(public, indent=1, default=_json_default))
         if not args.no_plot:
             plot_report(rep, out / f"{stem}_overlay.png")
         print(f"{stem}: segs={row['n_segments']} vps={row['n_vps']} "

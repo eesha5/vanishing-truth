@@ -80,6 +80,27 @@ def ransac_vp(segs: Segments, thresh_deg: float = 2.0, n_iter: int = 500,
     return vp, inl, float(lengths[inl].sum())
 
 
+def permute_directions(segs: Segments, rng: np.random.Generator) -> Segments:
+    """Null model for VP significance: keep every segment's midpoint and
+    length but randomly permute the directions among segments.  Preserves the
+    spatial layout and the orientation histogram, destroys the
+    position-orientation coupling that genuine convergence requires."""
+    d = segs.directions[rng.permutation(len(segs))]
+    mid, L = segs.midpoints, segs.lengths
+    return Segments(np.concatenate([mid - 0.5 * L[:, None] * d, mid + 0.5 * L[:, None] * d], axis=1))
+
+
+def permutation_null(segs: Segments, thresh_deg: float, n_iter: int, B: int,
+                     rng: np.random.Generator) -> np.ndarray:
+    """Best length-weighted RANSAC support found in B direction-permuted
+    copies of `segs` (same estimator settings as the real run)."""
+    out = np.zeros(B)
+    for b in range(B):
+        _, _, score = ransac_vp(permute_directions(segs, rng), thresh_deg, n_iter, rng)
+        out[b] = score
+    return out
+
+
 @dataclass
 class VPResult:
     vps: np.ndarray                 # (K,3) homogeneous, pixel coordinates, unit norm
@@ -90,6 +111,8 @@ class VPResult:
     nearest: np.ndarray = None      # (N,) nearest VP id for every segment (uncensored)
     residuals_all: np.ndarray = None  # (N,) residual to nearest VP, uncensored
     lengths: np.ndarray = None      # (N,) segment lengths (px)
+    perm_p: np.ndarray = None       # (K,) permutation p-value of each VP's support
+    perm_z: np.ndarray = None       # (K,) (support - null mean) / null std
     meta: dict = field(default_factory=dict)
 
     def l2_summary(self) -> dict:
@@ -126,7 +149,7 @@ class VPResult:
 
 def estimate_vps(segs: Segments, width: int, height: int, n_vps: int = 3,
                  thresh_deg: float = 2.0, n_iter: int = 500, min_support: int = 5,
-                 seed: int = 0) -> VPResult:
+                 seed: int = 0, n_perm: int = 0) -> VPResult:
     """Sequential unconstrained VP estimation.
 
     Segments are mapped to normalized coordinates, VPs are found one at a
@@ -139,15 +162,22 @@ def estimate_vps(segs: Segments, width: int, height: int, n_vps: int = 3,
     S = segs.transformed(T)
     n = len(S)
     remaining = np.ones(n, bool)
-    vps_norm = []
+    vps_norm, perm_p, perm_z = [], [], []
     for _ in range(n_vps):
         idx = np.flatnonzero(remaining)
         if idx.size < max(2, min_support):
             break
-        vp, inl, _ = ransac_vp(S[idx], thresh_deg, n_iter, rng)
+        vp, inl, score = ransac_vp(S[idx], thresh_deg, n_iter, rng)
         if vp is None or inl.sum() < min_support:
             break
         vps_norm.append(vp)
+        if n_perm > 0:
+            null = permutation_null(S[idx], thresh_deg, n_iter, n_perm, rng)
+            perm_p.append((1 + np.sum(null >= score)) / (n_perm + 1))
+            perm_z.append((score - null.mean()) / max(null.std(), 1e-9))
+        else:
+            perm_p.append(np.nan)
+            perm_z.append(np.nan)
         remaining[idx[inl]] = False
 
     K = len(vps_norm)
@@ -188,9 +218,11 @@ def estimate_vps(segs: Segments, width: int, height: int, n_vps: int = 3,
     remap = {old: new for new, old in enumerate(order)}
     labels = np.array([remap.get(l, -1) if l >= 0 else -1 for l in labels])
     nearest = np.array([remap.get(l, -1) if l >= 0 else -1 for l in nearest])
+    perm_p, perm_z = np.array(perm_p, float), np.array(perm_z, float)
     return VPResult(vps=vps_pix[order], labels=labels, residuals=resid,
                     support=support[order], thresh_deg=thresh_deg,
                     nearest=nearest, residuals_all=resid_all, lengths=segs.lengths,
+                    perm_p=perm_p[order] if K else perm_p, perm_z=perm_z[order] if K else perm_z,
                     meta={"width": width, "height": height})
 
 

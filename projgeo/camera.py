@@ -163,3 +163,91 @@ def l3_uncertainty(vps: np.ndarray, samples: np.ndarray, width: int, height: int
         "ortho_err_max_boot_p95": float(np.percentile(boot_max, 95)) if K >= 2 else None,
         "f_boot_cv": float(boot_f.std() / boot_f.mean()) if K >= 2 else None,
     }
+
+
+def select_manhattan_triple(vps: np.ndarray, width: int, height: int,
+                            support: np.ndarray | None = None, min_support_frac: float = 0.04) -> dict:
+    """Model selection over VP candidates (plan 4.6, simplified).
+
+    Among up to K candidate VPs choose the triple whose back-projected rays are
+    closest to mutually orthogonal for the best single focal length (principal
+    point at the image centre).  Returns the chosen indices and its L3 report,
+    plus the best pair when no triple exists.  A third VP that is a genuine but
+    non-orthogonal 3D direction (roof pitch, diagonal street) is thereby
+    ignored instead of being scored as a camera failure.
+    """
+    from itertools import combinations
+    K = len(vps)
+    idx = list(range(K))
+    if support is not None and K:
+        tot = float(np.sum(support))
+        idx = [i for i in idx if support[i] / max(tot, 1e-9) >= min_support_frac]
+    best = None
+    for tri in combinations(idx, 3):
+        rep = l3_report(vps[list(tri)], width, height)
+        if rep.get("status") != "ok":
+            continue
+        if best is None or rep["ortho_err_max_deg"] < best["ortho_err_max_deg"]:
+            best = {**rep, "triple": list(tri)}
+    if best is not None:
+        best["model"] = "M3"
+        return best
+    for pair in combinations(idx, 2):
+        rep = l3_report(vps[list(pair)], width, height)
+        if rep.get("status") != "ok":
+            continue
+        if best is None or rep["ortho_err_max_deg"] < best["ortho_err_max_deg"]:
+            best = {**rep, "triple": list(pair)}
+    if best is not None:
+        best["model"] = "M2"
+        return best
+    return {"status": "insufficient_vps", "model": "M0", "triple": []}
+
+
+def atlanta_focal_consistency(vps: np.ndarray, support: np.ndarray, width: int, height: int,
+                              min_support_frac: float = 0.04, vert_tol_deg: float = 30.0) -> dict:
+    """L3 for Atlanta worlds (plan 4.6): several horizontal directions, one
+    vertical.  Every horizontal VP is orthogonal to the vertical one, so each
+    (horizontal, vertical) pair implies a focal length via
+    f^2 = -(v_h - p).(v_v - p); a real camera makes them agree.
+
+    The vertical VP is the best-supported candidate whose direction from the
+    image centre is within `vert_tol_deg` of the image y-axis (identified by
+    direction only, never by orthogonality).  Returns the per-pair focal
+    estimates, the fraction with f^2 <= 0 (impossible pairs) and the spread
+    of log f over the possible pairs.
+    """
+    pp = np.array([width / 2.0, height / 2.0])
+    tot = float(np.sum(support)) if len(support) else 1.0
+    cand = [i for i in range(len(vps)) if support[i] / max(tot, 1e-9) >= min_support_frac]
+    vert = None
+    for i in sorted(cand, key=lambda i: -support[i]):
+        v = vps[i]
+        d = v[:2] - pp * v[2]            # direction from centre (works at infinity)
+        ang = np.degrees(np.arctan2(abs(d[0]), abs(d[1])))   # 0 = vertical
+        if ang < vert_tol_deg:
+            vert = i
+            break
+    out = {"vertical": vert, "pairs": [], "n_pairs": 0, "frac_impossible": np.nan,
+           "logf_spread": np.nan, "f_median": np.nan}
+    if vert is None:
+        return out
+    fs = []
+    for i in cand:
+        if i == vert:
+            continue
+        pf = pairwise_focal(vps[[i, vert]], pp)[0]
+        out["pairs"].append({"h": i, "f2": pf["f2"], "f": pf["f"]})
+        if pf["f2"] is not None:
+            fs.append(pf["f2"])
+    fs = np.array(fs)
+    out["n_pairs"] = int(len(fs))
+    if len(fs):
+        out["frac_impossible"] = float(np.mean(fs <= 0))
+        pos = fs[fs > 0]
+        if len(pos):
+            out["f_median"] = float(np.sqrt(np.median(pos)))
+        if len(pos) >= 2:
+            lf = 0.5 * np.log(pos)
+            out["logf_spread"] = float(lf.max() - lf.min())
+    return out
