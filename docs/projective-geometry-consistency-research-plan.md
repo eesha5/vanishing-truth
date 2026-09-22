@@ -298,7 +298,7 @@ This is a computer-vision project at its core: single-image projective geometry 
 | 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | **done 2026-09-22 - GO** (see 7.9) |
 | 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | |
 | 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | |
-| 5 | Locality analysis formalized: pairwise → windowed cameras → sheaf consistency radius (§4.4) | |
+| 5 | Locality analysis formalized: pairwise → windowed cameras → sheaf consistency radius (§4.4) | **first version done 2026-09-22** (7.10); bootstrap CIs + per-structure sections pending |
 | 6 | Blender injection suite (photoreal version of the Phase-1 synthetic tests, incl. shadows) → detection rate vs violation magnitude per level | |
 | 7 | Evaluation across generators, figures, writing | |
 
@@ -361,6 +361,24 @@ Setup: 102 YorkUrban photos vs 200 SDXL-base images (1024x768, 30 steps, CFG 6, 
 **Refined hypothesis for the paper:** the unit of local consistency is a *structure* (a facade, a floor, a row of windows), each internally coherent; the generator lacks the global camera that ties structures together. "Locally right, globally wrong" holds at the level of structures and image regions, not of pixel-distance within a family. This is exactly what the sheaf formulation (4.4) models if sections are per-structure cameras rather than per-patch VPs.
 
 **Consequences for the plan.** Phase 5 should build the *windowed / per-structure camera* comparison (half-image focal ratio -> grid of cameras -> sheaf consistency radius) as the headline metric; keep the variogram as the negative control that rules out smooth drift. Phase 3b adds more generators; outdoor scenes are the sensitive stratum.
+
+### 7.10 Phase 5, first version: regional camera consistency (2026-09-22)
+
+`projgeo/regional.py`. A 3x3 grid of half-size overlapping windows; each window gets its own unconstrained camera (VPs + focal, shared principal point). Windows = open cover, local cameras = sections, restriction maps = identity, so pairwise camera distance on overlaps is the gluing failure and the **consistency radius** = min over one global camera of the max distance to every local camera (min-max fit; rotation part solved by Nelder-Mead, focal part = half the log-range). Validated on synthetic scenes with an injected two-camera split (`synth.two_cameras`): recovers half the injected log-focal ratio and half the injected rotation to within noise, and detects a x1.3 focal split that the global L3 test barely registers (0.31 deg).
+
+Real vs SDXL (same pilot sets):
+
+| Regional metric | Real | SDXL | p |
+|---|---|---|---|
+| Consistency radius, focal (|log f|) | 0.32 [0.19, 0.53] | 0.89 [0.44, 1.72] | 3e-14 |
+| Pairwise |log f_i / f_j| (median) | 0.21 | 0.63 | 8e-21 (strongest separation of any metric) |
+| Consistency radius, rotation | 5.8 deg | 7.2 deg | 0.02 (weak) |
+| Adjacent-window frame rotation | 4.3 deg | 5.6 deg | 0.04 (weak) |
+| Share above real p95 (focal radius) | 5 % | 30 % | |
+
+**Reading.** What varies across regions of a generated image is the *focal length* - the strength of perspective - not the orientation of the Manhattan frame. Physically sensible: VP directions are pinned by the dominant lines in every window, but the focal length is set by the *distances between* VPs, i.e. by how fast lines converge, and that is what the generator fails to keep consistent from one part of the image to another. The rotation component has a high real-photo noise floor (5.8 deg) from windows with only two matched VPs; needs bootstrap CIs and larger windows before it can be interpreted.
+
+**Next for Phase 5:** (i) bootstrap CIs per window and a null-calibrated radius (percentile in the real distribution); (ii) sections per *structure* (segment clusters by VP pair / plane) rather than fixed windows; (iii) radius vs window size to estimate the length scale of consistency; (iv) sheaf-Laplacian energy as the aggregate.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 

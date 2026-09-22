@@ -32,6 +32,11 @@ METRICS = [
     ("l2_unexplained_frac", "L2 unexplained fraction", "higher = worse"),
     ("ortho_err_max_deg", "L3 ortho error max (deg)", "higher = worse"),
     ("f_spread", "L3 focal spread", "higher = worse"),
+    ("reg_radius_rot_deg", "Regional camera radius: rotation (deg)", "higher = no global camera"),
+    ("reg_radius_logf", "Regional camera radius: |log f| ", "higher = no global camera"),
+    ("reg_rot_adjacent_deg", "Adjacent-window frame rotation (deg)", "higher = worse gluing"),
+    ("reg_logf_pairwise", "Pairwise |log f_i/f_j| (median)", "higher = worse"),
+    ("reg_n_windows", "# windows with a camera", "coverage"),
     ("loc_index", "Locality index (rho_near - rho_far)", "higher = more local"),
     ("loc_index_undist", "Locality index, distortion-corrected", "higher = more local"),
     ("k1", "Fitted radial distortion k1", "nuisance"),
@@ -102,7 +107,7 @@ def main():
                 p = mannwhitneyu(x, real[key].astype(float).dropna(), alternative="two-sided").pvalue
                 ps.append(f"{p:.2g}")
         lines.append(f"| {label} ({note}) | " + " | ".join(cells) + " | " + ", ".join(ps) + " |")
-    for key in ("l2_capped_mean_deg", "ortho_err_max_deg", "loc_index"):
+    for key in ("l2_capped_mean_deg", "ortho_err_max_deg", "reg_radius_rot_deg", "reg_radius_logf", "loc_index"):
         rn = np.sort(real[key].astype(float).dropna().values)
         cells = []
         for name, (d, _) in sets.items():
@@ -114,18 +119,21 @@ def main():
     (out / "pilot_table.md").write_text(table)
     print("\n" + table)
 
-    fig, axes = plt.subplots(2, 3, figsize=(14, 8))
-    for ax, (key, label, _) in zip(axes.ravel()[:5], METRICS[:5]):
+    fig, axes = plt.subplots(3, 3, figsize=(15, 12))
+    panels = [m for m in METRICS if m[0] in ("l2_capped_mean_deg", "l2_unexplained_frac", "ortho_err_max_deg",
+                                              "f_spread", "reg_radius_rot_deg", "reg_radius_logf",
+                                              "reg_rot_adjacent_deg", "loc_index")]
+    for ax, (key, label, _) in zip(axes.ravel()[:8], panels):
         for name, (d, _) in sets.items():
             x = np.sort(d[key].astype(float).dropna().values)
             ax.step(x, np.arange(1, len(x) + 1) / len(x), where="post", label=name)
         ax.set_xlabel(label)
         ax.set_ylabel("ECDF")
         ax.grid(alpha=.3)
-        if key == "ortho_err_max_deg":
+        if key in ("ortho_err_max_deg", "reg_radius_rot_deg"):
             ax.set_xscale("log")
     axes[0, 0].legend(fontsize=8)
-    ax = axes[1, 2]
+    ax = axes[2, 2]
     centres = 0.5 * (LOCALITY_EDGES[1:] + LOCALITY_EDGES[:-1])
     for name, (_, rho) in sets.items():
         m = np.nanmean(rho, axis=0)

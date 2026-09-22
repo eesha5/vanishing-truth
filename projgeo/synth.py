@@ -138,3 +138,26 @@ def drift_vp(scene: SynthScene, axis: int, drift_px: np.ndarray) -> Segments:
     base = vp[:2] / vp[2]
     targets = np.concatenate([base + u[:, None] * drift_px[None, :], np.ones((m.sum(), 1))], axis=1)
     return _reaim(scene.segs, m, targets)
+
+
+def two_cameras(scene: SynthScene, f_ratio: float = 1.0, rot_deg: float = 0.0,
+                axis_frac: float = 0.5) -> Segments:
+    """Regional violation: segments whose midpoint lies right of `axis_frac`
+    of the width are re-aimed at the VPs of a *different* camera (focal
+    scaled by f_ratio, rotated by rot_deg about a fixed axis).  Every line
+    family still converges (L2 fine), each half is a valid camera, but no
+    single camera explains the whole image."""
+    K2 = scene.K.copy()
+    K2[0, 0] *= f_ratio
+    K2[1, 1] *= f_ratio
+    R2 = Rotation.from_euler("y", rot_deg, degrees=True).as_matrix() @ scene.R
+    vps2 = (K2 @ R2).T
+    right = scene.segs.midpoints[:, 0] > axis_frac * scene.width
+    xy = scene.segs.xy.copy()
+    out = Segments(xy)
+    for axis in range(3):
+        m = right & (scene.labels == axis)
+        if not m.any():
+            continue
+        out = _reaim(out, m, np.tile(vps2[axis], (m.sum(), 1)))
+    return out

@@ -15,7 +15,7 @@ learned score.
 | 3a | Pilot: 102 real vs 200 SDXL (go/no-go) | **done - GO**; see `results/` and plan 7.9 |
 | 3b | Full generated corpus (SD 1.5, SDXL local; public corpora for closed models) | |
 | 4 | L7 shadows (wedge-constraint LP) | |
-| 5 | Locality analysis + sheaf consistency radius | |
+| 5 | Regional camera consistency (windowed cameras, consistency radius) | first version done; see plan 7.10 |
 | 6 | Blender injection suite | |
 | 7 | Evaluation & paper | |
 

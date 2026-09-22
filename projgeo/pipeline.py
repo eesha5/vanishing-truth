@@ -8,6 +8,7 @@ import numpy as np
 from .camera import l3_report, l3_uncertainty
 from .lines import Segments, detect_lsd
 from .locality import residual_variogram
+from .regional import regional_cameras
 from .vp import VPResult, bootstrap_vps, estimate_vps
 
 LOCALITY_EDGES = np.linspace(0.0, 1.0, 11)
@@ -20,7 +21,7 @@ RELIABLE_SUPPORT_FRAC = 0.05
 
 
 def analyze_segments(segs: Segments, width: int, height: int, n_boot: int = 30,
-                     **vp_kwargs) -> dict:
+                     regional: bool = True, **vp_kwargs) -> dict:
     vpr: VPResult = estimate_vps(segs, width, height, **vp_kwargs)
     l2 = vpr.l2_summary()
     l3 = l3_report(vpr.vps, width, height)
@@ -38,10 +39,16 @@ def analyze_segments(segs: Segments, width: int, height: int, n_boot: int = 30,
     locality = {"rho": vg["rho"].tolist(), "rho_near": vg["rho_near"], "rho_far": vg["rho_far"],
                 "index": (vg["rho_near"] - vg["rho_far"]) if np.isfinite(vg["rho_near"]) and np.isfinite(vg["rho_far"]) else None,
                 "n_pairs": vg["n_pairs"]}
+    reg = {}
+    if regional and len(vpr.vps) >= 2 and l3.get("f_fit"):
+        r = regional_cameras(segs, vpr, l3["f_fit"], width, height)
+        reg = {k: r[k] for k in ("n_windows", "rot_pairwise_deg", "rot_adjacent_deg",
+                                 "logf_pairwise", "radius_rot_deg", "radius_logf")}
+        reg["_rot_vs_dist"] = r.get("rot_vs_dist")
     return {
         "width": width, "height": height, "n_segments": len(segs),
         "vps": vpr.vps.tolist(),
-        "L2": l2, "L3": l3, "locality": locality,
+        "L2": l2, "L3": l3, "locality": locality, "regional": reg,
         "_vp_result": vpr,
     }
 
@@ -74,6 +81,10 @@ def flatten_report(rep: dict) -> dict:
         row[k] = l3.get(k)
     loc = rep.get("locality", {})
     row["loc_index"] = loc.get("index"); row["loc_rho_near"] = loc.get("rho_near"); row["loc_rho_far"] = loc.get("rho_far")
+    reg = rep.get("regional", {})
+    for k in ("n_windows", "rot_pairwise_deg", "rot_adjacent_deg", "logf_pairwise",
+              "radius_rot_deg", "radius_logf"):
+        row[f"reg_{k}"] = reg.get(k)
     u = l3.get("uncertainty", {})
     for k in ("vp_std_max_deg", "ortho_err_max_boot_std", "ortho_err_max_boot_p95", "f_boot_cv"):
         row[k] = u.get(k)
