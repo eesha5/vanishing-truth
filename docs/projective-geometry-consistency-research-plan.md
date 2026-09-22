@@ -296,7 +296,7 @@ This is a computer-vision project at its core: single-image projective geometry 
 | 1 | Geometry core: L2 + L3 on classical tools; synthetic scenes with known cameras; violation injectors (`jitter_directions` → L2, `shift_vp` → L3, `drift_vp` → locality); tests | **done 2026-09-20** |
 | 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | **YorkUrban done 2026-09-20** (see §7.7); HoliCity pending |
 | 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | **done 2026-09-22 - GO** (see 7.9) |
-| 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | |
+| 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | SD 1.5 + SDXL done (200 each); frontier models via `data/generated/prompts.txt` pending |
 | 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | |
 | 5 | Locality analysis formalized: pairwise → windowed cameras → sheaf consistency radius (§4.4) | **first version done 2026-09-22** (7.10); bootstrap CIs + per-structure sections pending |
 | 6 | Blender injection suite (photoreal version of the Phase-1 synthetic tests, incl. shadows) → detection rate vs violation magnitude per level | |
@@ -391,6 +391,20 @@ Real photos converge to a single camera as the window grows (3 % focal disagreem
 *Consistent-twin control* (same segments re-aimed at the global VPs, uncensored membership within 10 deg, noise from tight inliers): excess over twin is positive for SDXL at every scale (0.07-0.18 vs 0.01-0.09 real) but with wide per-image spread; the control is conservative for generated images because lines further than 10 deg from every VP are left as they are. Report raw + real-control as primary, twin-excess as the lower bound.
 
 **Still to do in Phase 5:** (i) bootstrap CIs per window; (ii) sections per *structure* (segment clusters by VP pair / plane) rather than fixed windows; (iii) sheaf-Laplacian energy as the aggregate; (iv) FLUX / frontier models on the same curve.
+
+### 7.11 Three generators and a confound (2026-09-22)
+
+`results/three_way_real_sd15_sdxl.{md,png}`: YorkUrban (102) vs SD 1.5 (200, 640x480) vs SDXL (200).
+
+**Scaling.** SD 1.5 -> SDXL improves every level: L2 1.48 -> 1.23 deg (real 1.31, i.e. SDXL reaches real-photo concurrency), L3 10.4 -> 4.4 deg raw, 5.1 -> 2.9 deg on 3-reliable-VP images (real 0.66). Lines learned to converge; a shared camera did not. First data point for the scaling analysis (3.5C).
+
+**Confound found: camera-configuration diversity.** Real YorkUrban is one camera (fitted HFOV 48-51 deg). Generated images imply HFOV from 15 to 62 deg. Telephoto-like views put the VPs far away, where focal length is ill-determined in *every* window, so raw regional focal disagreement is inflated by conditioning as well as by inconsistency. The consistent-twin noise floor makes this visible (0.07 real vs 0.33 SDXL on 3-reliable-VP images). After subtracting the floor, the regional excess stays positive for both generators (0.17-0.19 vs 0.11 real) but is only borderline significant at n ~ 90 (SD 1.5 p = 0.05, SDXL p = 0.21).
+
+**Consequences.**
+1. L3 (with bootstrap-reliability filtering) is the robust headline; the regional-focal length-scale result (7.10) must be reported with the twin floor and stratified by fitted HFOV.
+2. **Phase 2b needed: a real set with diverse cameras** (EXIF focal lengths), because comparing a single-camera real set against generators that emit a distribution of cameras is unfair on every focal-based metric. Candidates: building/street photos with EXIF from a public dataset, or the real split of the Sarkar et al. release; HoliCity is also a single synthetic pinhole per panorama.
+3. Stratify all comparisons by fitted HFOV (or match on it) in Phase 7.
+4. Frontier models (Gemini, GPT-image) via the exported prompts `data/generated/prompts.txt`.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
