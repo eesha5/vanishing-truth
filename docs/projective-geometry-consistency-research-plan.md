@@ -378,7 +378,19 @@ Real vs SDXL (same pilot sets):
 
 **Reading.** What varies across regions of a generated image is the *focal length* - the strength of perspective - not the orientation of the Manhattan frame. Physically sensible: VP directions are pinned by the dominant lines in every window, but the focal length is set by the *distances between* VPs, i.e. by how fast lines converge, and that is what the generator fails to keep consistent from one part of the image to another. The rotation component has a high real-photo noise floor (5.8 deg) from windows with only two matched VPs; needs bootstrap CIs and larger windows before it can be interpreted.
 
-**Next for Phase 5:** (i) bootstrap CIs per window and a null-calibrated radius (percentile in the real distribution); (ii) sections per *structure* (segment clusters by VP pair / plane) rather than fixed windows; (iii) radius vs window size to estimate the length scale of consistency; (iv) sheaf-Laplacian energy as the aggregate.
+**Length scale (2026-09-22, `results/scale_curve_sdxl_vs_real.png`, 80 images per set).** Median pairwise |log f_i/f_j| between windows vs window size (fraction of image side):
+
+| window | 0.30 | 0.40 | 0.50 | 0.65 | 0.80 |
+|---|---|---|---|---|---|
+| real | 0.30 | 0.26 | 0.21 | 0.09 | **0.03** |
+| SDXL | 0.83 | 0.91 | 0.59 | 0.48 | **0.25** |
+| ratio | 2.8x | 3.5x | 2.8x | 5.1x | 8.2x |
+
+Real photos converge to a single camera as the window grows (3 % focal disagreement at 80 %); SDXL never converges (29 % at 80 %) and the gap *widens* with scale. There is no window size at which SDXL keeps one camera. The rotation component peaks at mid-size windows for both sets (estimator noise shape) with SDXL only modestly above real - again focal length, not orientation.
+
+*Consistent-twin control* (same segments re-aimed at the global VPs, uncensored membership within 10 deg, noise from tight inliers): excess over twin is positive for SDXL at every scale (0.07-0.18 vs 0.01-0.09 real) but with wide per-image spread; the control is conservative for generated images because lines further than 10 deg from every VP are left as they are. Report raw + real-control as primary, twin-excess as the lower bound.
+
+**Still to do in Phase 5:** (i) bootstrap CIs per window; (ii) sections per *structure* (segment clusters by VP pair / plane) rather than fixed windows; (iii) sheaf-Laplacian energy as the aggregate; (iv) FLUX / frontier models on the same curve.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
