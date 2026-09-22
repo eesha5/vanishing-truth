@@ -294,7 +294,7 @@ This is a computer-vision project at its core: single-image projective geometry 
 | Phase | Content | Status |
 |---|---|---|
 | 1 | Geometry core: L2 + L3 on classical tools; synthetic scenes with known cameras; violation injectors (`jitter_directions` → L2, `shift_vp` → L3, `drift_vp` → locality); tests | **done 2026-09-20** |
-| 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | **YorkUrban done 2026-09-20** (see §7.7); HoliCity pending |
+| 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | **YorkUrban done 2026-09-20** (7.7); **2b Commons wild set done 2026-09-22** (7.12); HoliCity dropped (single virtual camera) |
 | 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | **done 2026-09-22 - GO** (see 7.9) |
 | 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | SD 1.5 + SDXL done (200 each); frontier models via `data/generated/prompts.txt` pending |
 | 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | |
@@ -405,6 +405,29 @@ Real photos converge to a single camera as the window grows (3 % focal disagreem
 2. **Phase 2b needed: a real set with diverse cameras** (EXIF focal lengths), because comparing a single-camera real set against generators that emit a distribution of cameras is unfair on every focal-based metric. Candidates: building/street photos with EXIF from a public dataset, or the real split of the Sarkar et al. release; HoliCity is also a single synthetic pinhole per panorama.
 3. Stratify all comparisons by fitted HFOV (or match on it) in Phase 7.
 4. Frontier models (Gemini, GPT-image) via the exported prompts `data/generated/prompts.txt`.
+
+### 7.12 Phase 2b: a second real set changes the picture (2026-09-22)
+
+`scripts/collect_commons.py` -> `data/real/commons/`: 358 Wikimedia Commons photos (CC-licensed, attribution in metadata.jsonl) from **135 camera models** with EXIF focal lengths, same content strata as the prompts (241 outdoor / 117 indoor). Focal validation against EXIF (`results/commons_focal_validation.png`): L3 fit unbiased (median +6 %) but only 58 % within 20 % on well-conditioned images - EXIF 35 mm-equivalents are rounded, many photos are cropped.
+
+**Four-set comparison** (`results/four_set_comparison.{md,png}`), L3 orthogonality error, median:
+
+| | YorkUrban | Commons (wild real) | SD 1.5 | SDXL |
+|---|---|---|---|---|
+| all images | 0.69 deg | **12.2 deg** | 10.4 deg | 4.4 deg |
+| HFOV in [40, 60] deg | 0.62 | 9.9 | 4.3 | 2.1 |
+| 3 reliable VPs | 0.66 | 5.0 | 5.1 | 2.9 |
+| orthocentre offset (/diag), median | 0.07 | 1.0 | 2.0 | 1.6 |
+| negative f^2 with centred pp | 21 % | 58 % | 72 % | 73 % |
+
+**Wild real photos fail the centred-principal-point L3 test as badly as SD 1.5, and worse than SDXL.** Cropping explains part (cropped-aspect Commons photos: 24 deg vs 11 deg) but uncropped Commons photos still sit at 11 deg with orthocentres ~0.8 diagonals off-centre. Remaining causes are legitimate pinhole images that violate the *centred-pp* assumption - perspective-corrected / shift-lens architecture photographs (ubiquitous on Commons for facades), plus frontal views where the third VP is spurious and general non-Manhattan clutter. YorkUrban was hand-curated to have none of this.
+
+**Consequences (the central methodological lesson so far).**
+1. *The null distribution is not a property of "real photos"; it is a property of the real set.* Against YorkUrban SDXL looks broken; against Commons it looks better than real. Any paper claim must state the real set and its selection criteria, and should use both an idealised set (YorkUrban) and a wild set.
+2. The current L3 (pp fixed at centre) is the right test for *controlled* images (uncropped, unshifted - which includes generated images by construction) but not for wild photographs. A **principal-point-free L3** is needed as the wild-photo-valid necessary condition: with three finite VPs a camera exists iff the VP triangle is acute; the implied pp offset then measures crop/shift. (`scripts/l3_ppfree.py`, results in 7.13 when available.)
+3. Real-set selection must be made explicit and mirrored for generated images: e.g. require three reliable, well-separated VPs *and* an acute triangle, then compare residual magnitudes.
+4. Regional focal disagreement: Commons 0.33, SD 1.5 0.48, SDXL 0.63 (YorkUrban 0.21) - generators still worst, but the real-set dependence is again large. Twin-excess: Commons 0.12, SD 1.5 0.19, SDXL 0.19, borderline.
+5. The within-family variogram remains null for every set - smooth spatial drift is not the failure mode for any generator or real set.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
