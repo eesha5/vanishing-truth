@@ -297,7 +297,7 @@ This is a computer-vision project at its core: single-image projective geometry 
 | 2 | Real-image calibration: YorkUrban (102 imgs, GT VPs), HoliCity subset. Null distributions of every residual; estimator accuracy vs ground truth | **YorkUrban done 2026-09-20** (7.7); **2b Commons wild set done 2026-09-22** (7.12); HoliCity dropped (single virtual camera) |
 | 3a | **Pilot**: ~200 real vs ~200 SDXL content-matched images; run the distance-vs-error locality curve. Go/no-go for the headline narrative | **done 2026-09-22 - GO** (see 7.9) |
 | 3b | Full corpus: SD 1.5, SDXL, (FLUX if VRAM allows), public corpora for closed models; prompt strata of §3.4; log seeds/steps/CFG/dates | SD 1.5 + SDXL done (200 each); frontier models via `data/generated/prompts.txt` pending |
-| 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | |
+| 4 | L7 shadows: Kee–O'Brien–Farid wedge constraints as an LP; shadow/object pairs via SSIS or SAM 2 (semi-automatic first) | **geometry done + validated 2026-09-28 (7.16); association front-end unsolved** |
 | 5 | Locality analysis formalized: pairwise → windowed cameras → sheaf consistency radius (§4.4) | **first version done 2026-09-22** (7.10); bootstrap CIs + per-structure sections pending |
 | 6 | Blender injection suite (photoreal version of the Phase-1 synthetic tests, incl. shadows) → detection rate vs violation magnitude per level | |
 | 7 | Evaluation across generators, figures, writing | |
@@ -485,6 +485,31 @@ Sarkar et al. (CVPR 2024) report roughly 0.88-0.94 AUC for their *learned* line 
 **Permutation importance (held-out folds, curated vs SDXL):** `orthocenter_offset` 0.034, `f_boot_cv` 0.016, `reg_logf_pairwise` 0.013, `f_spread` 0.007, `reg_radius_logf` 0.005 - every leading feature is about *focal-length / principal-point coherence*, none about line straightness or concurrency. Same conclusion as 7.10 from an independent direction.
 
 *Caveat:* SDXL images are downsampled 1024 -> 640 for analysis while YorkUrban is native 640; resampling changes LSD statistics. The Commons-vs-SDXL comparison is resampling-matched (both downsampled) and still gives 0.82, so resampling is not driving the result, but the curated comparison should be repeated with native-resolution generation at 640.
+
+### 7.16 L7 shadows: geometry solved, association is the blocker (2026-09-28)
+
+`projgeo/shadows.py`, `tests/test_shadows.py` (6 tests), `scripts/l7_shadows.py`.
+
+**What works (validated).**
+- **Wedge-constraint LP** (Kee, O'Brien & Farid 2013). A shadow point plus the object region it may have come from defines a wedge of admissible light positions (two half-planes); one light exists iff all wedges intersect. Implemented as `min t s.t. A L - b <= t` with unit normals, so `t` is in **pixels**: `t <= 0` means feasible with margin, `t > 0` is how far the constraints are from admitting any light. A zero-width wedge (exact correspondence) degenerates correctly into a line constraint. A distant sun is handled by bounding `|L|` at 50 image diagonals rather than a separate projective branch.
+- **Synthetic scenes** (`synth.make_shadow_scene`, y-down world, base points back-projected from image space onto the ground plane): the light-VP fit recovers the sun's image exactly (|est . gt| = 1.0000, residual 0.06-0.66 deg). Injected shadow rotation makes the LP violation grow monotonically (feasible at 0 deg, infeasible from 10 deg at 5 px annotation width), and wider annotation wedges are strictly more permissive - the test never cries foul below the annotation uncertainty.
+- **Shadow detection** (syllabus Unit 1: gray-value transformation, Otsu thresholding, morphological closing/opening, connected components with an area filter). Clean on clearly sunlit outdoor scenes: `results/example_shadow_mask_works.png`.
+
+**What does not work: automatic shadow-object association.** To avoid needing object segmentation I tried an association-free variant: shadows of upright objects run along the sun's azimuth, so their major axes should converge at one VP, which should lie on the horizon. Measured on 640 px images:
+
+| | YorkUrban | Commons | SDXL (sunlit) | SD 1.5 (sunlit) |
+|---|---|---|---|---|
+| shadow-axis concurrency RMS | 14.4 deg | 14.9 deg | 32.5 deg | **3.0 deg** |
+| sun VP distance from horizon | 0.20 | 0.26 | 1.19 | 0.30 |
+| images with >= 3 axes | 48 % | 44 % | 65 % | 35 % |
+
+The real-photo null is 14 deg and **SD 1.5 scores better than real photographs** - the test is measuring the detector, not the light. `results/example_shadow_axes_fail.png` shows why: the mask fires on dark glass, signs and shaded interiors, and the extracted "axes" are signs and glass panels. Blurrier SD 1.5 images give fewer, smoother blobs whose axes agree by accident. Same failure shape as 7.13-7.14: an untested applicability assumption (here "elongated dark region = cast shadow of an upright object on a horizontal plane") rather than an estimator bug.
+
+**Consequences.**
+1. The association-free variant is **dropped** as a primary metric. Kee et al. hand-annotated correspondences for exactly this reason.
+2. L7 needs real association: instance shadow detection (SSIS) or SAM 2 masks for object-shadow pairs, or a hand-annotated subset (~50 images per set is enough for the LP, which uses few pairs per image).
+3. The content must match the test: a **sunlit outdoor stratum with upright objects** on both sides. YorkUrban is largely indoor/overcast, so it is the wrong real set for L7; a targeted Commons collection (sunlit streets with poles/bollards/people) is needed.
+4. Everything above the association layer is done and validated, so once pairs exist the residual is one function call.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
