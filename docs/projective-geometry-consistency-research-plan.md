@@ -564,6 +564,27 @@ So the defensible claim is: *generators satisfy the orthogonality of the Manhatt
 
 **The useful by-product.** In the three-direction scenes SDXL's orthogonality improves markedly (1.75 -> 1.32 deg; best-triple 1.37 -> 0.99, approaching the curated-real 0.62) while **focal spread does not move at all** (0.43 -> 0.46). Giving the model an easier, well-structured Manhattan scene buys better orientation consistency and buys nothing for focal coherence. That is independent support for the narrowed claim of 7.17: the deficit is a single-camera *focal length / principal point* deficit, not an orientation deficit.
 
+### 7.19 Scaling dissociates orientation from camera coherence (2026-09-28)
+
+SD 1.5 and SDXL on the **same 120 three-direction prompts** (only the model differs), selected images only, `results/l3_scaling_table.md`:
+
+| | SD 1.5 (n=32) | SDXL (n=36) | p |
+|---|---|---|---|
+| L3 orthogonality error | 2.08 deg | 1.32 | 0.46 (n.s.) |
+| best-triple L3 | 1.76 | 0.99 | 0.46 (n.s.) |
+| **focal spread** | **0.19** | **0.46** | **0.0002** |
+| **orthocentre offset** | **0.22** | **0.59** | **0.005** |
+| fitted HFOV | 57.5 | 57.9 | 0.50 (n.s.) |
+| detected segments | 320 | 267 | 0.57 (n.s.) |
+
+Replicated on the independent street/facade stratum (n = 61 vs 79): orthogonality 3.29 -> 1.75 (p = 0.04, SDXL better), focal spread 0.22 -> 0.43 (p = 0.008, SDXL **worse**), orthocentre offset 0.33 -> 0.94 (p = 0.004, SDXL worse). HFOV-matched to 40-70 deg on the three-direction set (n = 19 vs 21) the focal-spread gap survives (0.17 vs 0.43, p = 0.011) while orthogonality still does not differ (p = 0.28).
+
+**The finding.** Going from SD 1.5 to SDXL - more parameters, better training, far better images - **improves or leaves unchanged the orientation consistency of the Manhattan frame while making focal-length and principal-point coherence roughly 2.4x worse**, on identical prompts, with matched HFOV distributions and matched line density. The two capabilities are not only distinguishable, they move in *opposite* directions with scale.
+
+This is the strongest form of the project's thesis and it is a genuine dissociation, not an artefact: the same images that agree better about *which way* the scene's axes point agree *less* about how zoomed-in the camera is. It also predicts that simply scaling further will not fix camera coherence, which is the substantive claim a benchmark paper wants to make ("...for now" in Sarkar et al.'s title is, on this evidence, optimistic for this particular constraint).
+
+**Open question for the paper.** Why would scale hurt focal coherence? Candidate explanations to test: (i) SDXL's multi-aspect / multi-resolution training teaches a wider distribution of implied focal lengths, which may be less consistently applied *within* one image; (ii) the two-text-encoder conditioning and larger receptive field produce more compositional scenes assembled from parts; (iii) the SDXL VAE's larger effective downsampling weakens long-range geometric coupling. Testing (i) is cheap: compare within-image focal spread across generated aspect ratios and resolutions (a sampling variable already in plan 3.4).
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
