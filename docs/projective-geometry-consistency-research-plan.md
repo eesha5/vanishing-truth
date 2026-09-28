@@ -466,6 +466,26 @@ Visual inspection of the failing Commons images settles it: e.g. `outputs/common
 2. Pipeline now reports three L3 variants: top-3 (`L3`), best-triple (`L3_best`), Atlanta (`L3_atlanta`); `pilot_compare.py` includes them.
 3. VP-estimator improvement is demoted from top priority: the estimator is adequate on Manhattan content (81 % GT VPs within 2 deg); the limit is the test's applicability. DeepLSD / J-linkage remain nice-to-have.
 
+### 7.15 Residual classifiers: comparison with Sarkar et al. (2026-09-28)
+
+`scripts/classify_residuals.py` -> `results/classifier_report.md`, `results/classifier_roc.png`. Six classifiers (logistic regression, decision tree, SVM-RBF, random forest, naive Bayes, kNN) on the **per-image residual vector only** - never pixels. 5-fold stratified CV AUC. Features are grouped so that camera-configuration / content columns (HFOV, f, k1, segment counts) can be excluded from the "geometry" condition.
+
+| Task | best AUC, geometry only | + configuration features |
+|---|---|---|
+| YorkUrban vs SDXL | 0.916 (SVM) | 0.927 (RF) |
+| YorkUrban vs SD 1.5 | 0.916 | 0.943 |
+| Commons (wild) vs SDXL | 0.824 (RF) | 0.817 |
+| all real vs all generated | 0.835 (RF) | 0.836 |
+| HFOV 40-60 deg matched | 0.810 (RF) | 0.796 |
+
+Sarkar et al. (CVPR 2024) report roughly 0.88-0.94 AUC for their *learned* line classifier and 0.86-0.92 for perspective fields on their hardest set. Our explicit residuals reach the same band (0.92) against a curated real set, and hold 0.81-0.82 in the two hardest conditions - **wild real photos** and **HFOV-matched** - where a naive detector could not rely on camera configuration. The point is not to win on AUC but that interpretable, unit-bearing residuals are competitive with black-box features while saying *which* constraint failed.
+
+**Per-group AUC (random forest, alone):** L3 is the strongest single group everywhere (0.91 curated / 0.78 wild), REGIONAL second (0.84 / 0.71), L2 third (0.67-0.79), **LOCALITY at chance (0.45-0.54)** - the variogram carries no real-vs-generated signal, consistent with 7.9-7.11. Configuration features alone give 0.89 against YorkUrban but only 0.69 against Commons, quantifying the confound of 7.11: a large part of "detection" against a single-camera real set is just camera diversity, which is why the geometry-only and HFOV-matched columns are the honest ones.
+
+**Permutation importance (held-out folds, curated vs SDXL):** `orthocenter_offset` 0.034, `f_boot_cv` 0.016, `reg_logf_pairwise` 0.013, `f_spread` 0.007, `reg_radius_logf` 0.005 - every leading feature is about *focal-length / principal-point coherence*, none about line straightness or concurrency. Same conclusion as 7.10 from an independent direction.
+
+*Caveat:* SDXL images are downsampled 1024 -> 640 for analysis while YorkUrban is native 640; resampling changes LSD statistics. The Commons-vs-SDXL comparison is resampling-matched (both downsampled) and still gives 0.82, so resampling is not driving the result, but the curated comparison should be repeated with native-resolution generation at 640.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
