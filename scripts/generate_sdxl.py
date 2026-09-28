@@ -16,7 +16,9 @@ from pathlib import Path
 
 import torch
 
-from projgeo.prompts import yorkurban_matched
+from projgeo.prompts import three_direction, yorkurban_matched
+
+STRATA = {"yorkurban": yorkurban_matched, "three_direction": three_direction}
 
 MODELS = {
     "sdxl": "stabilityai/stable-diffusion-xl-base-1.0",
@@ -46,6 +48,7 @@ def main():
     ap.add_argument("--steps", type=int, default=30)
     ap.add_argument("--cfg", type=float, default=6.0)
     ap.add_argument("--seed", type=int, default=1000)
+    ap.add_argument("--stratum", default="yorkurban", choices=list(STRATA))
     args = ap.parse_args()
     if args.model == "sd15" and args.width == 1024:
         args.width, args.height = 640, 480
@@ -58,7 +61,7 @@ def main():
         done = {json.loads(l)["file"] for l in log.read_text().splitlines() if l.strip()}
 
     pipe = load_pipeline(args.model)
-    prompts = yorkurban_matched(args.n, seed=0)
+    prompts = STRATA[args.stratum](args.n, seed=0)
     t0 = time.time()
     n_new = 0
     with log.open("a") as fh:
@@ -75,6 +78,7 @@ def main():
             rec = {"file": fname, "model": MODELS[args.model], "prompt": prompt,
                    "negative_prompt": neg, "stratum": stratum, "seed": seed,
                    "steps": args.steps, "cfg": args.cfg, "width": args.width,
+                   "prompt_set": args.stratum,
                    "height": args.height, "scheduler": type(pipe.scheduler).__name__,
                    "date": datetime.now(timezone.utc).isoformat()}
             fh.write(json.dumps(rec) + "\n")

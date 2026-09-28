@@ -41,3 +41,29 @@ def test_l3_handles_vp_at_infinity():
     assert rep["orthocenter"] is None
     assert rep["ortho_err_max_deg"] < 1e-3
     assert abs(rep["f_fit"] - f) / f < 1e-3
+
+
+def test_identifiability_is_independent_of_orthogonality():
+    """The applicability rule must not change when the camera is made
+    inconsistent: it may only depend on the evidence, not on the residual."""
+    import numpy as np
+    from projgeo.selection import identifiability
+    from projgeo.synth import make_scene, shift_vp
+    from projgeo.vp import estimate_vps
+
+    sc = make_scene(seed=0, n_segments=300, noise_px=1.0)
+    clean = identifiability(sc.segs, estimate_vps(sc.segs, sc.width, sc.height, n_vps=3),
+                            sc.width, sc.height)
+    broken_segs = shift_vp(sc, 2, np.array([400.0, 0.0]))   # L3 violated, layout kept
+    broken = identifiability(broken_segs, estimate_vps(broken_segs, sc.width, sc.height, n_vps=3),
+                             sc.width, sc.height)
+    assert clean["identifiable"], clean
+    assert broken["identifiable"], broken
+
+
+def test_looks_uncropped():
+    from projgeo.selection import looks_uncropped
+    assert looks_uncropped(1024, 768)      # 4:3
+    assert looks_uncropped(3000, 2000)     # 3:2
+    assert looks_uncropped(1920, 1080)     # 16:9
+    assert not looks_uncropped(1000, 640)  # arbitrary crop

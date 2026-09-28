@@ -57,3 +57,52 @@ def yorkurban_matched(n: int, seed: int = 0):
         out.append((prompt, _NEGATIVE, stratum))
         i += 1
     return out
+
+
+# ---------------------------------------------------------------------------
+# Three-direction stratum (plan 7.14): scenes that *guarantee* three visible
+# mutually orthogonal directions, so the L3 camera test is applicable.
+# Each prompt names a corner where two surfaces meet plus vertical edges.
+# ---------------------------------------------------------------------------
+
+_SUBJ_3D_INDOOR = [
+    "the inside corner of an empty room where two walls meet the floor, skirting boards visible along both walls",
+    "an empty office corner with a tiled floor, two plain walls meeting at the corner and a door frame on one wall",
+    "the corner of a corridor where it turns, doors along both walls and a tiled floor",
+    "an empty classroom corner with a whiteboard on one wall, windows on the other and a linoleum floor",
+    "a stairwell corner with concrete steps, a handrail and two plain walls meeting",
+    "the corner of a warehouse interior with steel shelving along both walls and a concrete floor",
+    "an empty shop interior corner with a counter along one wall and a tiled floor",
+    "the corner of a hotel room with a window on one wall, a wardrobe against the other and a carpeted floor",
+]
+_SUBJ_3D_OUTDOOR = [
+    "the corner of a brick office building where two facades meet, rows of windows receding along both walls and a pavement below",
+    "a street corner showing two facades of the same concrete building, with kerb and road markings receding",
+    "the outside corner of a modern glass building, window mullions visible along both faces",
+    "the corner of a car park structure with concrete beams along both faces and painted lines on the deck",
+    "a building corner with a fire escape on one facade and brickwork courses receding along the other",
+    "the corner of a school building with a tiled roof edge, windows along both walls and a paved yard",
+    "a warehouse corner in an industrial estate with roller doors along one wall and a loading apron",
+    "the corner of a town hall with stone courses along two facades and steps at the base",
+]
+_COND_3D = ["on an overcast day", "in flat daylight", "in bright daylight", "with even lighting"]
+
+
+def three_direction(n: int, seed: int = 0):
+    """Prompts whose scenes contain three visible orthogonal directions.
+
+    Same photographic style and negative prompt as `yorkurban_matched`, so
+    the two strata differ only in scene structure.
+    """
+    rng = random.Random(seed)
+    pools = [("3d-outdoor", _SUBJ_3D_OUTDOOR), ("3d-indoor", _SUBJ_3D_INDOOR)]
+    out = []
+    i = 0
+    while len(out) < n:
+        stratum, subjects = pools[i % 2]
+        subj = subjects[(i // 2) % len(subjects)]
+        cond = rng.choice(_COND_3D)
+        prompt = f"{subj}, {cond}, {_STYLE}".replace("  ", " ").replace(" ,", ",")
+        out.append((prompt, _NEGATIVE, stratum))
+        i += 1
+    return out
