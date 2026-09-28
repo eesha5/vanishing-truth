@@ -16,9 +16,10 @@ from pathlib import Path
 
 import torch
 
-from projgeo.prompts import three_direction, yorkurban_matched
+from projgeo.prompts import three_direction, three_direction_rich, yorkurban_matched
 
-STRATA = {"yorkurban": yorkurban_matched, "three_direction": three_direction}
+STRATA = {"yorkurban": yorkurban_matched, "three_direction": three_direction,
+          "three_direction_rich": three_direction_rich}
 
 MODELS = {
     "sdxl": "stabilityai/stable-diffusion-xl-base-1.0",

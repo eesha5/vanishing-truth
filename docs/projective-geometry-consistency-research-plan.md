@@ -547,6 +547,23 @@ So the defensible claim is: *generators satisfy the orthogonality of the Manhatt
 
 **Caveats / next.** The matched band has only 22-24 images per generated set; the three-direction prompt stratum (`projgeo.prompts.three_direction`, `data/generated/sdxl_3d`) exists to raise the selection rate and restore power, and must be run for SD 1.5 and the frontier models too. A curated *diverse-camera* real set remains the missing reference: Commons-selected is the closest available but still differs in HFOV distribution.
 
+### 7.18 Three-direction stratum: a failed fix with a useful by-product (2026-09-28)
+
+120 SDXL images from `prompts.three_direction` (room corners, corridor turns, building corners) vs the original street/facade stratum, same pipeline and selection rule (`results/l3_3d_table.md`):
+
+| | YorkUrban | Commons | SDXL street/facade | SDXL 3-direction |
+|---|---|---|---|---|
+| selected (identifiable + uncropped) | 71 % | 30 % | **40 %** | **30 %** |
+| median detected segments | 386 | 418 | 426 | **318** |
+| L3 orthogonality error | 0.65 deg | 2.19 | 1.75 | **1.32** |
+| best-triple L3 | 0.62 | 1.85 | 1.37 | **0.99** |
+| focal spread | 0.08 | 0.11 | 0.43 | **0.46** |
+| orthocentre offset | 0.06 | 0.18 | 0.94 | 0.59 |
+
+**The fix failed for a diagnosable reason.** Prompting for corners *lowered* the selection rate (40 % -> 30 %) because corner scenes as written are line-*sparse* - empty rooms, plain walls - so the weakest VP family falls below the 8 %-of-line-length support threshold. Dominant rejection reasons are unchanged in kind ("weakest family supports only x %", "worst VP localised to y deg"), just more frequent. Scene *structure* was improved at the cost of scene *evidence*. Hence `prompts.three_direction_rich` (v2): every template now pairs the corner with at least two repeating line-rich features (tiles, shelving, window grids, panelled ceilings, brick courses).
+
+**The useful by-product.** In the three-direction scenes SDXL's orthogonality improves markedly (1.75 -> 1.32 deg; best-triple 1.37 -> 0.99, approaching the curated-real 0.62) while **focal spread does not move at all** (0.43 -> 0.46). Giving the model an easier, well-structured Manhattan scene buys better orientation consistency and buys nothing for focal coherence. That is independent support for the narrowed claim of 7.17: the deficit is a single-camera *focal length / principal point* deficit, not an orientation deficit.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.

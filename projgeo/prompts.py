@@ -106,3 +106,51 @@ def three_direction(n: int, seed: int = 0):
         out.append((prompt, _NEGATIVE, stratum))
         i += 1
     return out
+
+
+# ---------------------------------------------------------------------------
+# Three-direction stratum, v2 (plan 7.18).  The v1 corner scenes were
+# line-*sparse* (empty rooms, plain walls): median 318 detected segments vs
+# 426 for the street/facade stratum, so the weakest VP family often fell below
+# the support threshold and the selection rate dropped to 30 %.  Every
+# template below pairs the corner with at least two repeating, line-rich
+# features (tiles, shelving, window grids, panelling, brick courses) so that
+# all three directions carry enough line length to be identifiable.
+# ---------------------------------------------------------------------------
+
+_SUBJ_RICH_INDOOR = [
+    "the corner of a tiled bathroom where two walls of square tiles meet a tiled floor, straight grout lines along both walls",
+    "the corner of a warehouse aisle with tall steel shelving along both walls, a concrete floor with painted lane markings and a panelled ceiling",
+    "the corner of a library reading room with bookshelves along both walls, a parquet floor and a coffered ceiling",
+    "the corner of a data centre aisle with server racks along both walls, a raised floor of square panels and cable trays overhead",
+    "the corner of a supermarket aisle with shelving along both walls, a tiled floor and a grid of ceiling panels",
+    "the corner of a school corridor with lockers along both walls, a chequerboard tiled floor and strip lights in a panelled ceiling",
+    "the corner of a gym with wall bars along both walls, a wooden floor with painted court lines and a girdered ceiling",
+    "the corner of an office with floor-to-ceiling window mullions on one wall, filing cabinets along the other and a grid ceiling",
+]
+_SUBJ_RICH_OUTDOOR = [
+    "the corner of a brick building where two facades meet, many rows of identical windows along both facades and paving slabs below",
+    "the corner of a multi-storey car park, concrete beams and railings along both faces and painted parking bays on the deck",
+    "the corner of a glass office tower, a dense grid of window mullions on both faces and paving stones at the base",
+    "a street corner of a Victorian terrace, brick courses and sash windows along both streets and a kerb with paving slabs",
+    "the corner of a warehouse with corrugated cladding on both walls, roller shutter doors and a concrete apron with expansion joints",
+    "the corner of a stadium exterior with repeating concrete fins on both faces and a paved forecourt",
+    "the corner of a hospital block with balcony railings along both facades and a tiled plaza below",
+    "the corner of a modern apartment building with balconies stacked along both facades and block paving at street level",
+]
+
+
+def three_direction_rich(n: int, seed: int = 0):
+    """Three visible orthogonal directions *and* high line density."""
+    rng = random.Random(seed)
+    pools = [("rich-outdoor", _SUBJ_RICH_OUTDOOR), ("rich-indoor", _SUBJ_RICH_INDOOR)]
+    out = []
+    i = 0
+    while len(out) < n:
+        stratum, subjects = pools[i % 2]
+        subj = subjects[(i // 2) % len(subjects)]
+        cond = rng.choice(_COND_3D)
+        prompt = f"{subj}, {cond}, {_STYLE}".replace("  ", " ").replace(" ,", ",")
+        out.append((prompt, _NEGATIVE, stratum))
+        i += 1
+    return out
