@@ -511,6 +511,42 @@ The real-photo null is 14 deg and **SD 1.5 scores better than real photographs**
 3. The content must match the test: a **sunlit outdoor stratum with upright objects** on both sides. YorkUrban is largely indoor/overcast, so it is the wrong real set for L7; a targeted Commons collection (sunlit streets with poles/bollards/people) is needed.
 4. Everything above the association layer is done and validated, so once pairs exist the residual is one function call.
 
+### 7.17 Content-controlled L3: the headline narrows (2026-09-28)
+
+`projgeo/selection.py`, `scripts/l3_controlled.py`, `results/l3_controlled_table.md`.
+
+**The applicability rule.** An image is *identifiable* when three VP families are each supported by >= 8 % of detected line length, localised to < 1 deg (bootstrap), resolvably distinct (VP separation >= 10 deg and >= 5x its own uncertainty) and spatially spread (>= 0.12 diagonal). Orthogonality, focal length, orthocentre and triangle shape are excluded by construction - they are the measurement. Real photographs additionally need a standard aspect ratio (cropping moves the principal point). Two validations:
+* against YorkUrban ground truth, selected images have 90 % of VPs within 5 deg of the hand-labelled truth vs 57 % of rejected ones, and the L3 > 5 deg rate falls from 30 % to 7 %;
+* `tests/test_geometry.py::test_identifiability_is_independent_of_orthogonality` injects a `shift_vp` violation (breaks L3, preserves the line layout) and asserts the selection decision is unchanged - so the rule cannot be selecting real images for being consistent.
+
+**Selection rates are themselves a result.** Curated real 71 %, SDXL 40 %, wild real 30 %, SD 1.5 30 %.
+
+**L3 among selected images** (medians; n = 72 / 109 / 61 / 79):
+
+| | YorkUrban | Commons (wild real) | SD 1.5 | SDXL |
+|---|---|---|---|---|
+| orthogonality error, max pair | 0.65 deg | 2.19 | 3.29 | 1.75 |
+| focal spread across VP pairs | 0.08 | 0.11 | 0.22 | 0.43 |
+| orthocentre offset (/diag) | 0.06 | 0.18 | 0.33 | 0.94 |
+| above YorkUrban p95 | 6 % | **23 %** | 15 % | 9 % |
+
+Filtering cuts wild-real L3 from 12.2 deg (7.12) to 2.19 deg, confirming the 7.14 diagnosis: the wild-photo failure was applicability, not photo geometry.
+
+**Selected *and* HFOV-matched to 40-60 deg** (n = 65 / 22 / 23 / 24), the cleanest comparison available:
+
+| vs reference | L3 ortho | focal spread | orthocentre offset |
+|---|---|---|---|
+| SDXL vs **curated** real | 1.52 vs 0.62, p = 4e-5 | 0.46 vs 0.08, p = 5e-7 | 0.63 vs 0.06 |
+| SD 1.5 vs curated real | 2.26 vs 0.62, p = 3e-6 | 0.19 vs 0.08, p = 0.002 | 0.24 vs 0.06 |
+| SDXL vs **wild** real | p = **0.47 (n.s.)** | p = 0.003 | p = 0.036 |
+| SD 1.5 vs wild real | p = **0.94 (n.s.)** | p = 0.25 (n.s.) | p = 0.76 (n.s.) |
+
+**Revision of the headline.** Once content and camera configuration are controlled, **generated images' orthogonality error is statistically indistinguishable from wild real photographs**. The large gap reported in 7.9-7.11 was measured against a hand-curated, single-camera dataset and is substantially an artefact of that reference. What survives against wild real photographs is narrower and more specific: **the coherence of the implied focal length and principal point** (SDXL focal spread 0.46 vs 0.075, p = 0.003; orthocentre offset 0.63 vs 0.22, p = 0.036) - and for SDXL only, not SD 1.5. This agrees with the two independent lines of evidence in 7.10 (regional focal disagreement) and 7.15 (every top classifier feature is a focal / principal-point feature).
+
+So the defensible claim is: *generators satisfy the orthogonality of the Manhattan frame about as well as ordinary photographs, but do not commit to one focal length and one principal point across the image.* The "no global camera" thesis stands; "fails the three-VP orthogonality test" does not.
+
+**Caveats / next.** The matched band has only 22-24 images per generated set; the three-direction prompt stratum (`projgeo.prompts.three_direction`, `data/generated/sdxl_3d`) exists to raise the selection rate and restore power, and must be run for SD 1.5 and the frontier models too. A curated *diverse-camera* real set remains the missing reference: Commons-selected is the closest available but still differs in HFOV distribution.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
