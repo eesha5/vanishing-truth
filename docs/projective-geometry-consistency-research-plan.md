@@ -583,7 +583,19 @@ Replicated on the independent street/facade stratum (n = 61 vs 79): orthogonalit
 
 This is the strongest form of the project's thesis and it is a genuine dissociation, not an artefact: the same images that agree better about *which way* the scene's axes point agree *less* about how zoomed-in the camera is. It also predicts that simply scaling further will not fix camera coherence, which is the substantive claim a benchmark paper wants to make ("...for now" in Sarkar et al.'s title is, on this evidence, optimistic for this particular constraint).
 
-**Open question for the paper.** Why would scale hurt focal coherence? Candidate explanations to test: (i) SDXL's multi-aspect / multi-resolution training teaches a wider distribution of implied focal lengths, which may be less consistently applied *within* one image; (ii) the two-text-encoder conditioning and larger receptive field produce more compositional scenes assembled from parts; (iii) the SDXL VAE's larger effective downsampling weakens long-range geometric coupling. Testing (i) is cheap: compare within-image focal spread across generated aspect ratios and resolutions (a sampling variable already in plan 3.4).
+**Open question for the paper.** Why would scale hurt focal coherence? Candidates: (i) SDXL's multi-aspect / multi-resolution training teaches a wider distribution of implied focal lengths applied inconsistently *within* an image; (ii) larger receptive field and two-text-encoder conditioning produce scenes assembled from parts; (iii) the VAE's effective downsampling weakens long-range geometric coupling.
+
+**(i) is rejected (2026-09-29).** Same 40 line-rich prompts generated at three aspect ratios (`data/generated/sdxl_rich{,_1x1,_16x9}`), selected images only:
+
+| | selection | within-image focal spread | Atlanta log-f spread | HFOV |
+|---|---|---|---|---|
+| 4:3 (1024x768) | 48 % | 0.440 | 0.350 (n=10) | 43 deg |
+| 1:1 (1024x1024) | 60 % | 0.354 | 0.502 (n=18) | 23 deg |
+| 16:9 (1344x768) | 48 % | 0.421 | 0.123 (n=12) | 50 deg |
+
+Kruskal-Wallis across aspect ratios: within-image focal spread p = 0.95, Atlanta log-f spread p = 0.10 (n = 10-18, not monotone in aspect unusualness). **Focal incoherence is invariant to the generated aspect ratio**, so it travels with the model rather than the output shape. Incidental: square outputs imply a much narrower field of view (HFOV 23 deg vs 43-50) and are easier to select from (60 %).
+
+Next cheapest test is (iii): same aspect, three pixel counts (768x576 / 1024x768 / 1280x960). If long-range latent coupling is the mechanism, coherence should degrade with resolution.
 
 ### 7.20 The right residual: Atlanta focal consistency (2026-09-29)
 
