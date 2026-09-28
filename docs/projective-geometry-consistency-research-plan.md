@@ -585,6 +585,28 @@ This is the strongest form of the project's thesis and it is a genuine dissociat
 
 **Open question for the paper.** Why would scale hurt focal coherence? Candidate explanations to test: (i) SDXL's multi-aspect / multi-resolution training teaches a wider distribution of implied focal lengths, which may be less consistently applied *within* one image; (ii) the two-text-encoder conditioning and larger receptive field produce more compositional scenes assembled from parts; (iii) the SDXL VAE's larger effective downsampling weakens long-range geometric coupling. Testing (i) is cheap: compare within-image focal spread across generated aspect ratios and resolutions (a sampling variable already in plan 3.4).
 
+### 7.20 The right residual: Atlanta focal consistency (2026-09-29)
+
+**Why L3-as-orthogonality cannot be the headline.** Among *selected* wild real photographs the L3 distribution is bimodal: a bulk of genuine Manhattan scenes at 0.1-3 deg plus a ~25 % tail at 20-80 deg. Inspection (`outputs/commons_selected_montage.png`) shows the tail is near-frontal facades and angled streets: three well-supported, well-localised, resolvably distinct VP families that are simply **not mutually orthogonal**. No evidence-based selection rule removes them - raising the support threshold makes the tail *worse* (median 16 -> 26 -> 35 deg), and 98 % of them already have standard aspect ratios, so cropping is not the mechanism. These are Atlanta worlds, not measurement failures.
+
+**The fix is the model-comparison residual, not more filtering.** `camera.atlanta_focal_consistency`: identify the vertical VP by direction alone, then require every horizontal VP to imply the same focal length with it (f^2 = -(v_h - p).(v_v - p)). This holds in Manhattan *and* Atlanta worlds, so it is valid on real-world scene structure. On selected images (n = 72 / 32 / 30 / 31):
+
+| | YorkUrban | Commons (wild real) | SD 1.5 (3-dir) | SDXL (3-dir) |
+|---|---|---|---|---|
+| L3 orthogonality, median | 0.65 deg | **8.13** | 2.14 | 1.19 |
+| L3 orthogonality, p90 | 1.8 | **66.6** | 4.5 | 5.7 |
+| **Atlanta impossible (h,v) pairs** | **0.00** | **0.00** | 0.12 | 0.33 |
+| **Atlanta log-f spread** | **0.142** | **0.191** | 0.559 | 0.618 |
+
+vs the wild-real reference: log-f spread p = 0.035 (SDXL), 0.073 (SD 1.5); impossible-pair fraction not yet significant (n ~ 20 with >= 2 horizontal pairs, zero-inflated).
+
+**Reading.** Under the Atlanta residual the two real sets agree with each other (0.142 vs 0.191) and both are ~3x tighter than either generator, while the Manhattan-only residual wrongly ranks wild real photographs as the *worst* set. So:
+1. **Atlanta log-f spread is the primary L3 statistic for the paper**; Manhattan orthogonality is reported as a secondary, scene-restricted measure with its applicability caveat.
+2. Real photographs have **no** impossible (horizontal, vertical) VP pairs in either set, while a third of SDXL images contain a pair for which no camera exists at all. With more usable images this is potentially the cleanest headline the project can offer, and it is a categorical claim rather than a distributional one.
+3. This is the fourth independent route to the same conclusion (7.10 regional, 7.15 classifier importance, 7.19 scaling dissociation, 7.20 Atlanta): the deficit is *focal-length / principal-point coherence*, not orientation.
+
+**Power is now the binding constraint**: only ~20 images per generated set have >= 2 horizontal VP families. The line-rich stratum (7.18, 48 % selection) is the efficient way to fix this - roughly 250 images per model gives ~120 selected.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
