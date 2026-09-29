@@ -614,10 +614,30 @@ vs the wild-real reference: log-f spread p = 0.035 (SDXL), 0.073 (SD 1.5); impos
 
 **Reading.** Under the Atlanta residual the two real sets agree with each other (0.142 vs 0.191) and both are ~3x tighter than either generator, while the Manhattan-only residual wrongly ranks wild real photographs as the *worst* set. So:
 1. **Atlanta log-f spread is the primary L3 statistic for the paper**; Manhattan orthogonality is reported as a secondary, scene-restricted measure with its applicability caveat.
-2. Real photographs have **no** impossible (horizontal, vertical) VP pairs in either set, while a third of SDXL images contain a pair for which no camera exists at all. With more usable images this is potentially the cleanest headline the project can offer, and it is a categorical claim rather than a distributional one.
+2. ~~Real photographs have **no** impossible (horizontal, vertical) VP pairs in either set~~ **- corrected in 7.21.** That read the *median fraction* of impossible pairs (0.00 = fewer than half the pairs in the median image), not the share of images containing one. Properly measured the claim is a gradient, not a categorical difference.
 3. This is the fourth independent route to the same conclusion (7.10 regional, 7.15 classifier importance, 7.19 scaling dissociation, 7.20 Atlanta): the deficit is *focal-length / principal-point coherence*, not orientation.
 
 **Power is now the binding constraint**: only ~20 images per generated set have >= 2 horizontal VP families. The line-rich stratum (7.18, 48 % selection) is the efficient way to fix this - roughly 250 images per model gives ~120 selected.
+
+### 7.21 Powered Atlanta comparison, and a correction (2026-09-29)
+
+250 line-rich SDXL images (45 % selection, n = 112) against both real references; `scripts/atlanta_compare.py`, `results/atlanta_table.md`, `results/atlanta.png`. Bootstrap CIs on medians, Wilson intervals on proportions.
+
+| | YorkUrban | Commons (wild real) | SDXL line-rich | SDXL street/facade |
+|---|---|---|---|---|
+| selected images | 72 | 121 | 112 | 79 |
+| with >= 2 horizontal families | 72 | 120 | 109 | 74 |
+| **log-f spread**, median [95 % CI] | **0.142 [0.106, 0.221]** | **0.152 [0.093, 0.220]** | **0.355 [0.272, 0.529]** | **0.593 [0.355, 0.933]** |
+| images with an impossible (h,v) pair | 28 % [19, 39] | 44 % [36, 53] | 58 % [48, 66] | 67 % [56, 76] |
+| Manhattan orthogonality (secondary) | 0.65 [0.58, 0.84] | 2.82 [2.06, 4.02] | 1.94 [1.47, 2.28] | 1.75 [1.32, 2.63] |
+
+Mann-Whitney on log-f spread: SDXL vs YorkUrban p = 5.6e-5, vs Commons p = 9.8e-5 (line-rich); p = 7.1e-5 / 1.1e-4 (street/facade).
+
+**The headline, now powered.** The two real sets agree with each other to within their confidence intervals (0.142 vs 0.152) and both generated sets sit clearly above with non-overlapping CIs, against *both* references. This is the result the paper should lead with: **a real photograph's horizontal directions agree on one focal length to within ~15 %; SDXL's disagree by 35-60 %.**
+
+**Correction to 7.20.** I previously wrote that real photographs have *no* impossible (horizontal, vertical) VP pairs. That was read off the median *fraction* of impossible pairs per image, which is 0.00 whenever fewer than half of an image's pairs are impossible - it is not the share of images containing one. Measured properly, the share rises monotonically 28 % (curated real) -> 44 % (wild real) -> 58 % (SDXL line-rich) -> 67 % (SDXL street/facade). Still an ordered effect, but a gradient, not the categorical claim I stated. The log-f spread, not the impossible-pair rate, is the clean statistic.
+
+**Secondary observation.** Manhattan orthogonality again ranks wild real photographs (2.82) as worse than both generated sets (1.75-1.94), reinforcing 7.20: that residual is not valid on uncurated content and must not be the paper's primary measure.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
