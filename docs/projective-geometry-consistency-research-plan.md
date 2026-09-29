@@ -564,7 +564,10 @@ So the defensible claim is: *generators satisfy the orthogonality of the Manhatt
 
 **The useful by-product.** In the three-direction scenes SDXL's orthogonality improves markedly (1.75 -> 1.32 deg; best-triple 1.37 -> 0.99, approaching the curated-real 0.62) while **focal spread does not move at all** (0.43 -> 0.46). Giving the model an easier, well-structured Manhattan scene buys better orientation consistency and buys nothing for focal coherence. That is independent support for the narrowed claim of 7.17: the deficit is a single-camera *focal length / principal point* deficit, not an orientation deficit.
 
-### 7.19 Scaling dissociates orientation from camera coherence (2026-09-28)
+### 7.19 Scaling dissociates orientation from camera coherence (2026-09-28) - **RETRACTED, see 7.22**
+
+> The "focal coherence gets worse with scale" half of this section does not survive a powered test with the valid (Atlanta) residual. The orientation half does. Read 7.22 before using anything here.
+
 
 SD 1.5 and SDXL on the **same 120 three-direction prompts** (only the model differs), selected images only, `results/l3_scaling_table.md`:
 
@@ -638,6 +641,25 @@ Mann-Whitney on log-f spread: SDXL vs YorkUrban p = 5.6e-5, vs Commons p = 9.8e-
 **Correction to 7.20.** I previously wrote that real photographs have *no* impossible (horizontal, vertical) VP pairs. That was read off the median *fraction* of impossible pairs per image, which is 0.00 whenever fewer than half of an image's pairs are impossible - it is not the share of images containing one. Measured properly, the share rises monotonically 28 % (curated real) -> 44 % (wild real) -> 58 % (SDXL line-rich) -> 67 % (SDXL street/facade). Still an ordered effect, but a gradient, not the categorical claim I stated. The log-f spread, not the impossible-pair rate, is the clean statistic.
 
 **Secondary observation.** Manhattan orthogonality again ranks wild real photographs (2.82) as worse than both generated sets (1.75-1.94), reinforcing 7.20: that residual is not valid on uncurated content and must not be the paper's primary measure.
+
+### 7.22 Retraction of the scaling dissociation (2026-09-29)
+
+250 line-rich images per model (identical prompts), Atlanta residual, n = 87 (SD 1.5) vs 109 (SDXL) with >= 2 horizontal families:
+
+| SD 1.5 vs SDXL | SD 1.5 | SDXL | p |
+|---|---|---|---|
+| **Atlanta log-f spread** | 0.465 | 0.355 | **0.55 (n.s.)** |
+| images with an impossible (h,v) pair | 68 % | 58 % | 0.18 (n.s.) |
+| Manhattan orthogonality | 2.93 deg | 1.94 | 0.0002 (SDXL better) |
+
+**What was wrong.** 7.19 reported that SDXL's focal coherence is 2.4x worse than SD 1.5's (p = 0.0002). That used `f_spread` from `l3_report`, which takes the spread of *all* pairwise focal estimates among the top three VPs - including horizontal-horizontal pairs, for which f^2 = -(v_i - p).(v_j - p) is meaningless unless those two directions really are orthogonal. SDXL and SD 1.5 differ in how often their VP triples are near-orthogonal, so that statistic compared different things in the two sets. Restricted to (horizontal, vertical) pairs, which are orthogonal by construction in both Manhattan and Atlanta worlds, the difference vanishes at four times the sample size.
+
+**What survives.**
+1. Both generators are ~2.5-3x worse than both real references on log-f spread (0.355 / 0.465 vs 0.142 / 0.152; p ~ 3e-5 against either reference). This is the robust, powered, primary result.
+2. Scaling SD 1.5 -> SDXL **improves Manhattan orientation consistency** (2.93 -> 1.94 deg, p = 0.0002) and leaves focal coherence **statistically unchanged**.
+3. So the honest scaling statement is *"orientation improves with scale; camera coherence does not"* - a null on the focal side, not a reversal. That still supports the paper's thesis (scaling is not fixing the camera deficit) without the overreach.
+
+**Methodological lesson for the write-up.** Every focal-length statistic must be built only from VP pairs that are orthogonal by construction. `camera.l3_report`'s `f_spread` and `pairwise_focal` are valid only for a verified-orthogonal triple; `camera.atlanta_focal_consistency` is the safe general-purpose version. The classifier feature-importance result (7.15) leans partly on `f_spread` and `f_boot_cv` and should be re-run with Atlanta features before being quoted.
 
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
