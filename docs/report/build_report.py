@@ -90,7 +90,7 @@ def placeholder(text):
     p.paragraph_format.space_after = Pt(6)
 
 
-def table(headers, rows, widths=None):
+def table(headers, rows, widths=None, fsize=9.5):
     t = doc.add_table(rows=1, cols=len(headers))
     t.style = "Table Grid"
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -99,7 +99,7 @@ def table(headers, rows, widths=None):
         c.text = ""
         run = c.paragraphs[0].add_run(h)
         run.bold = True
-        run.font.size = Pt(9.5)
+        run.font.size = Pt(fsize)
         shd = OxmlElement("w:shd")
         shd.set(qn("w:val"), "clear")
         shd.set(qn("w:fill"), "D9E2F3")
@@ -109,7 +109,7 @@ def table(headers, rows, widths=None):
         for i, v in enumerate(row):
             cells[i].text = ""
             run = cells[i].paragraphs[0].add_run(str(v))
-            run.font.size = Pt(9.5)
+            run.font.size = Pt(fsize)
     if widths:
         for r in t.rows:
             for i, w in enumerate(widths):
@@ -540,18 +540,36 @@ para("The primary comparison uses the Atlanta focal-consistency residual on imag
      "applicability rule. The statistic is the spread of the logarithm of the focal length implied by "
      "each horizontal direction together with the vertical direction. A value of zero means every part "
      "of the scene agrees on how zoomed-in the camera is.")
-table(["Quantity", "York Urban (curated real)", "Commons (uncurated real)", "SD 1.5 (line-rich)",
-       "SDXL (line-rich)"],
-      [["Images admitted by the rule", "72", "121", "92", "112"],
-       ["With at least two horizontal families", "72", "120", "87", "109"],
+table(["Quantity", "York Urban (real)", "Commons (real)", "SD 1.5", "SDXL", "Gemini", "GPT-image"],
+      [["Images admitted by the rule", "72", "121", "92", "112", "—", "—"],
+       ["With at least two horizontal families", "72", "120", "87", "109", "—", "—"],
        ["Log-focal spread, median [95% CI]", "0.142 [0.106, 0.221]", "0.152 [0.093, 0.220]",
-        "0.465 [0.324, 0.709]", "0.355 [0.272, 0.529]"],
+        "0.465 [0.324, 0.709]", "0.355 [0.272, 0.529]", "pending", "pending"],
        ["Images with an impossible pair", "28% [19, 39]", "44% [36, 53]", "68% [57, 77]",
-        "58% [48, 66]"],
-       ["Manhattan orthogonality (secondary)", "0.65 deg", "2.82 deg", "2.93 deg", "1.94 deg"]],
-      widths=[1.8, 1.3, 1.3, 1.1, 1.0])
+        "58% [48, 66]", "pending", "pending"],
+       ["Manhattan orthogonality (secondary)", "0.65 deg", "2.82 deg", "2.93 deg", "1.94 deg",
+        "pending", "pending"]],
+      widths=[1.55, 0.9, 0.85, 0.7, 0.7, 0.9, 0.9], fsize=8.5)
 caption("Table 5.2: Atlanta focal consistency on admitted images. Intervals are bootstrap intervals "
-        "for medians and Wilson intervals for proportions.")
+        "for medians and Wilson intervals for proportions. The two right-hand columns are reserved "
+        "for closed frontier models (Section 5.4.1).")
+
+doc.add_heading("5.4.1 Reserved: frontier closed models", level=3)
+placeholder("Results for Gemini and GPT-image. These columns are reserved, not omitted: the same 200 "
+            "prompts used for the local models are exported to data/generated/prompts.txt, so the "
+            "images are content-matched by construction. Procedure: save the generated images as "
+            "0000.png, 0001.png ... (keeping the prompt index) into data/generated/gemini/ and "
+            "data/generated/gptimage/, record the model version and date in a README.txt in each "
+            "folder, then run  python scripts/atlanta_compare.py --real data/real/commons --gen "
+            "data/generated/sdxl_rich data/generated/sd15_rich data/generated/gemini "
+            "data/generated/gptimage  and copy the resulting medians and intervals into Table 5.2. "
+            "Thirty to fifty images per model is sufficient for the median and its interval.")
+para("This is the single highest-value extension of the study. Stable Diffusion 1.5 and SDXL differ "
+     "by roughly two years of model development, and the orientation residual improves across that "
+     "gap while camera coherence does not. Whether a current frontier model has closed the camera-"
+     "coherence gap is therefore the direct test of the claim, made informally in 2026 commentary, "
+     "that the geometric tell has disappeared. The measurement pipeline is model-agnostic and "
+     "requires no modification to accept these images.")
 figure("atlanta_scaling.png", 6.0)
 caption("Figure 5.4: Distribution of the log-focal spread (left) and the share of images containing a "
         "vanishing-point pair for which no camera exists (right).")
@@ -573,7 +591,9 @@ table(["Measure", "SD 1.5", "SDXL", "p", "Interpretation"],
        ["Atlanta log-focal spread", "0.465", "0.355", "0.55 (n.s.)", "Unchanged"],
        ["Images with an impossible pair", "68%", "58%", "0.18 (n.s.)", "Unchanged"]],
       widths=[1.8, 1.0, 1.0, 1.0, 1.7])
-caption("Table 5.3: Scaling comparison on identical prompts, 87 and 109 usable images respectively.")
+caption("Table 5.3: Scaling comparison on identical prompts, 87 and 109 usable images respectively. "
+        "A frontier model added to this comparison would extend the capability axis by a further "
+        "generation; see Section 5.4.1.")
 para("Scaling from Stable Diffusion 1.5 to SDXL improves the consistency of scene orientation "
      "significantly, while camera coherence is statistically unchanged and remains roughly two and a "
      "half to three times worse than either real reference. The honest reading is that orientation "
@@ -675,7 +695,7 @@ bullet("Evidence that increasing model capability improves orientation but not c
 
 doc.add_heading("5.11 Limitations", level=2)
 para("Frontier closed models are not yet evaluated, so the conclusions apply to locally reproducible "
-     "open models. The shadow constraint is not deployed at scale. Generated images are analysed after "
+     "open models; Table 5.2 reserves columns for them and Section 5.4.1 gives the procedure. The shadow constraint is not deployed at scale. Generated images are analysed after "
      "downsampling to the resolution of the curated real reference, and the effect of resampling on "
      "line detection has not been isolated, although the comparison against the uncurated corpus is "
      "resampling-matched and gives the same conclusion. Several constraint levels remain unimplemented.")
@@ -747,5 +767,16 @@ r = p.add_run("Note on sources: verify reference details against the publishers'
 r.italic = True
 r.font.size = Pt(9.5)
 
-doc.save(str(OUT))
-print("written:", OUT)
+def _save(document, target: Path):
+    """Word holds an exclusive lock on an open .docx; fall back to a sibling name."""
+    try:
+        document.save(str(target))
+        return target
+    except PermissionError:
+        alt = target.with_name(target.stem + "_v2" + target.suffix)
+        document.save(str(alt))
+        return alt
+
+
+saved = _save(doc, OUT)
+print("written:", saved)

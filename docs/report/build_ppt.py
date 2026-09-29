@@ -164,12 +164,13 @@ def table(s, x, y, w, h, headers, rows, col_w=None, fsize=11):
         for j, val in enumerate(row):
             c = t.cell(i, j)
             c.text = ""
-            p = c.text_frame.paragraphs[0]
-            r = p.add_run()
-            r.text = str(val)
-            r.font.size = Pt(fsize)
-            r.font.color.rgb = INK
-            r.font.name = BODY_FONT
+            for k, ln in enumerate(str(val).splitlines() or [""]):
+                p = c.text_frame.paragraphs[0] if k == 0 else c.text_frame.add_paragraph()
+                r = p.add_run()
+                r.text = ln
+                r.font.size = Pt(fsize)
+                r.font.color.rgb = INK
+                r.font.name = BODY_FONT
             c.fill.solid()
             c.fill.fore_color.rgb = WHITE if i % 2 else LIGHT
             c.vertical_anchor = MSO_ANCHOR.MIDDLE
@@ -514,18 +515,21 @@ notes(s, "This is the methodological heart of the project. Stress that no eviden
 s = slide()
 title(s, "Results 3: Primary Finding", "Atlanta focal consistency on images that pass the applicability rule")
 table(s, 0.7, 2.0, 11.93, 2.2,
-      ["Quantity", "York Urban (real)", "Commons (real)", "SD 1.5", "SDXL"],
-      [["Images admitted", "72", "121", "92", "112"],
+      ["Quantity", "York Urban (real)", "Commons (real)", "SD 1.5", "SDXL", "Gemini", "GPT-image"],
+      [["Images admitted", "72", "121", "92", "112", "—", "—"],
        ["Log-f spread, median [95% CI]", "0.142 [0.106, 0.221]", "0.152 [0.093, 0.220]",
-        "0.465 [0.324, 0.709]", "0.355 [0.272, 0.529]"],
-       ["Images with an impossible pair", "28%", "44%", "68%", "58%"]],
-      col_w=[3.3, 2.3, 2.3, 2.0, 2.03], fsize=11.5)
-card(s, 0.7, 4.45, 11.93, 1.15, fill=NAVY)
-textbox(s, 1.0, 4.62, 11.3, 0.9,
+        "0.465 [0.324, 0.709]", "0.355 [0.272, 0.529]", "pending", "pending"],
+       ["Images with an impossible pair", "28%", "44%", "68%", "58%", "pending", "pending"]],
+      col_w=[2.75, 1.65, 1.65, 1.55, 1.55, 1.39, 1.39], fsize=10)
+textbox(s, 0.7, 4.22, 11.93, 0.3,
+        "Right-hand columns reserved for closed frontier models — same prompts, same pipeline, "
+        "see the next slide.", size=11, italic=True, color=AMBER)
+card(s, 0.7, 4.62, 11.93, 1.1, fill=NAVY)
+textbox(s, 1.0, 4.78, 11.3, 0.85,
         "In a real photograph the horizontal directions agree on ONE focal length to within ~15%. "
         "In generated images they disagree by 35-60%.  (p ≈ 3×10⁻⁵ against either "
         "real reference)", size=16, bold=True, color=WHITE)
-bullets(s, 0.7, 5.85, 11.93, 1.3, [
+bullets(s, 0.7, 5.95, 11.93, 1.2, [
     "The two real references agree with each other within their confidence intervals — the "
     "result does not depend on which real set is used.",
     "Both generators sit clearly above both references, with non-overlapping intervals.",
@@ -570,6 +574,34 @@ textbox(s, 7.8, 5.25, 4.5, 1.45,
         size=12.5, color=INK, space_after=3)
 notes(s, "Six algorithms were run: logistic regression, decision tree, SVM, random forest, naive "
          "Bayes, kNN. Five-fold stratified cross-validation.")
+
+# ================================================================== 15b reserved
+s = slide()
+title(s, "Results 6: Frontier Models", "Reserved — the direct test of “has the geometric tell disappeared?”")
+card(s, 0.7, 2.0, 5.9, 4.1, fill=LIGHT)
+textbox(s, 1.0, 2.25, 5.3, 0.4, "WHY THIS SLOT EXISTS", size=12, bold=True, color=NAVY)
+textbox(s, 1.0, 2.75, 5.3, 3.1,
+        ["SD 1.5 and SDXL are separated by about two years of model development. Across that gap "
+         "orientation improves and camera coherence does not.", "",
+         "A current frontier model is therefore the decisive test of the 2026 claim that the "
+         "geometric tell is gone.", "",
+         "The pipeline is model-agnostic: no code changes are needed to accept these images."],
+        size=13, color=INK, space_after=4)
+card(s, 6.83, 2.0, 5.8, 4.1, fill=NAVY)
+textbox(s, 7.13, 2.25, 5.2, 0.4, "PROCEDURE", size=12, bold=True, color=AMBER)
+bullets(s, 7.13, 2.75, 5.2, 3.2, [
+    "Same 200 prompts, already exported to data/generated/prompts.txt",
+    "Save as 0000.png, 0001.png … keeping the prompt index, into "
+    "data/generated/gemini/ and data/generated/gptimage/",
+    "Record model version and date in a README.txt per folder",
+    "Run scripts/atlanta_compare.py with the new folders appended to --gen",
+    "30–50 images per model is enough for the median and its interval",
+], size=12, color=WHITE, space_after=6)
+placeholder_note(s, 0.7, 6.25, 11.93, 1.0,
+                 "Once the images exist, paste the two new columns into the Results 3 table and "
+                 "replace this slide with the comparison figure produced by atlanta_compare.py.")
+notes(s, "If asked why frontier models are missing: no API access was available; the design "
+         "anticipates them and the prompts are already content-matched.")
 
 # ================================================================== 16 demonstration
 s = slide()
@@ -624,8 +656,8 @@ notes(s, "If asked for one sentence, use the line at the bottom.")
 s = slide()
 title(s, "Future Scope")
 items = [
-    ("Frontier models", "Gemini, GPT-image and FLUX on the same prompt set — prompts already "
-                        "exported and the analysis is model-agnostic.", TEAL),
+    ("Frontier models", "Gemini, GPT-image and FLUX on the same prompt set. Slot reserved on "
+                        "the Results 6 slide; prompts already exported.", TEAL),
     ("Shadow association", "SSIS or SAM 2 for object-shadow pairs; the wedge LP above it is built "
                            "and validated.", NAVY),
     ("Remaining levels", "Cross-ratio, conics, reflections and cross-modal normal agreement.", TEAL),
@@ -687,5 +719,10 @@ textbox(s, 0.7, 6.9, 11.93, 0.4,
         size=11, italic=True, color=GREY)
 notes(s, "Verify all reference details against publisher records before submission.")
 
-prs.save(str(OUT))
-print("written:", OUT, "slides:", len(prs.slides.__iter__.__self__._sldIdLst))
+try:
+    prs.save(str(OUT))
+    saved = OUT
+except PermissionError:
+    saved = OUT.with_name(OUT.stem + "_v2" + OUT.suffix)
+    prs.save(str(saved))
+print("written:", saved, "slides:", len(prs.slides.__iter__.__self__._sldIdLst))
