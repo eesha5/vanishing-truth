@@ -1,0 +1,206 @@
+# SUPERSEDED for new runs by prompts_rich.txt (plan 7.23). This is the yorkurban_matched set;
+# kept because data/generated/gemini/ and gptimage/ (first frontier batch) were made from it.
+# Prompts used for the local SDXL / SD1.5 sets, in order (index = image number).
+# For Gemini / ChatGPT: paste the prompt text as-is, ask for a 4:3 photo, save as <index>.png
+# into data/generated/<model>/ and note model name + date in data/generated/<model>/README.txt
+
+0000 [outdoor] the brick facade of a university building with rows of rectangular windows on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0001 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0002 [outdoor] a downtown street with three-storey brick storefronts and parked cars on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0003 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0004 [outdoor] a concrete campus building with a covered walkway and square columns on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0005 [indoor] an office with a desk, filing cabinets, bookshelves and a window, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0006 [outdoor] a modern glass office building seen from the sidewalk across the street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0007 [indoor] a stairwell with concrete steps and a metal handrail, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0008 [outdoor] an old stone library building with tall windows and a flight of steps in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0009 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0010 [outdoor] a row of terraced brick houses along a straight residential street in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0011 [indoor] a computer lab with rows of desks and monitors in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0012 [outdoor] a parking garage entrance with concrete pillars and painted lines in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0013 [indoor] an atrium with a tiled floor, balconies and a glass ceiling with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0014 [outdoor] a pedestrian plaza between two rectangular office buildings in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0015 [indoor] a seminar room with a long table, chairs and a projector screen with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0016 [outdoor] a corner of a city block with a cafe on the ground floor in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0017 [indoor] a building lobby with an elevator bank and a reception desk with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0018 [outdoor] a loading dock behind a warehouse with roll-up doors on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0019 [indoor] a laboratory bench with cabinets above and equipment on the counter in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0020 [outdoor] the brick facade of a university building with rows of rectangular windows on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0021 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0022 [outdoor] a downtown street with three-storey brick storefronts and parked cars in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0023 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0024 [outdoor] a concrete campus building with a covered walkway and square columns in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0025 [indoor] an office with a desk, filing cabinets, bookshelves and a window with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0026 [outdoor] a modern glass office building seen from the sidewalk across the street on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0027 [indoor] a stairwell with concrete steps and a metal handrail, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0028 [outdoor] an old stone library building with tall windows and a flight of steps in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0029 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0030 [outdoor] a row of terraced brick houses along a straight residential street on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0031 [indoor] a computer lab with rows of desks and monitors with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0032 [outdoor] a parking garage entrance with concrete pillars and painted lines on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0033 [indoor] an atrium with a tiled floor, balconies and a glass ceiling with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0034 [outdoor] a pedestrian plaza between two rectangular office buildings on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0035 [indoor] a seminar room with a long table, chairs and a projector screen in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0036 [outdoor] a corner of a city block with a cafe on the ground floor in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0037 [indoor] a building lobby with an elevator bank and a reception desk in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0038 [outdoor] a loading dock behind a warehouse with roll-up doors on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0039 [indoor] a laboratory bench with cabinets above and equipment on the counter with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0040 [outdoor] the brick facade of a university building with rows of rectangular windows in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0041 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0042 [outdoor] a downtown street with three-storey brick storefronts and parked cars in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0043 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0044 [outdoor] a concrete campus building with a covered walkway and square columns on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0045 [indoor] an office with a desk, filing cabinets, bookshelves and a window with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0046 [outdoor] a modern glass office building seen from the sidewalk across the street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0047 [indoor] a stairwell with concrete steps and a metal handrail, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0048 [outdoor] an old stone library building with tall windows and a flight of steps on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0049 [indoor] a hallway junction with lockers, notice boards and a drinking fountain in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0050 [outdoor] a row of terraced brick houses along a straight residential street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0051 [indoor] a computer lab with rows of desks and monitors with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0052 [outdoor] a parking garage entrance with concrete pillars and painted lines in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0053 [indoor] an atrium with a tiled floor, balconies and a glass ceiling with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0054 [outdoor] a pedestrian plaza between two rectangular office buildings in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0055 [indoor] a seminar room with a long table, chairs and a projector screen, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0056 [outdoor] a corner of a city block with a cafe on the ground floor on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0057 [indoor] a building lobby with an elevator bank and a reception desk, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0058 [outdoor] a loading dock behind a warehouse with roll-up doors in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0059 [indoor] a laboratory bench with cabinets above and equipment on the counter with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0060 [outdoor] the brick facade of a university building with rows of rectangular windows in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0061 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0062 [outdoor] a downtown street with three-storey brick storefronts and parked cars in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0063 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0064 [outdoor] a concrete campus building with a covered walkway and square columns on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0065 [indoor] an office with a desk, filing cabinets, bookshelves and a window in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0066 [outdoor] a modern glass office building seen from the sidewalk across the street on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0067 [indoor] a stairwell with concrete steps and a metal handrail with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0068 [outdoor] an old stone library building with tall windows and a flight of steps on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0069 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0070 [outdoor] a row of terraced brick houses along a straight residential street in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0071 [indoor] a computer lab with rows of desks and monitors with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0072 [outdoor] a parking garage entrance with concrete pillars and painted lines on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0073 [indoor] an atrium with a tiled floor, balconies and a glass ceiling, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0074 [outdoor] a pedestrian plaza between two rectangular office buildings in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0075 [indoor] a seminar room with a long table, chairs and a projector screen with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0076 [outdoor] a corner of a city block with a cafe on the ground floor in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0077 [indoor] a building lobby with an elevator bank and a reception desk, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0078 [outdoor] a loading dock behind a warehouse with roll-up doors in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0079 [indoor] a laboratory bench with cabinets above and equipment on the counter, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0080 [outdoor] the brick facade of a university building with rows of rectangular windows on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0081 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0082 [outdoor] a downtown street with three-storey brick storefronts and parked cars on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0083 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0084 [outdoor] a concrete campus building with a covered walkway and square columns on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0085 [indoor] an office with a desk, filing cabinets, bookshelves and a window, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0086 [outdoor] a modern glass office building seen from the sidewalk across the street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0087 [indoor] a stairwell with concrete steps and a metal handrail with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0088 [outdoor] an old stone library building with tall windows and a flight of steps in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0089 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0090 [outdoor] a row of terraced brick houses along a straight residential street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0091 [indoor] a computer lab with rows of desks and monitors with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0092 [outdoor] a parking garage entrance with concrete pillars and painted lines in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0093 [indoor] an atrium with a tiled floor, balconies and a glass ceiling in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0094 [outdoor] a pedestrian plaza between two rectangular office buildings in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0095 [indoor] a seminar room with a long table, chairs and a projector screen in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0096 [outdoor] a corner of a city block with a cafe on the ground floor on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0097 [indoor] a building lobby with an elevator bank and a reception desk with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0098 [outdoor] a loading dock behind a warehouse with roll-up doors on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0099 [indoor] a laboratory bench with cabinets above and equipment on the counter with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0100 [outdoor] the brick facade of a university building with rows of rectangular windows in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0101 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0102 [outdoor] a downtown street with three-storey brick storefronts and parked cars on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0103 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0104 [outdoor] a concrete campus building with a covered walkway and square columns on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0105 [indoor] an office with a desk, filing cabinets, bookshelves and a window with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0106 [outdoor] a modern glass office building seen from the sidewalk across the street on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0107 [indoor] a stairwell with concrete steps and a metal handrail, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0108 [outdoor] an old stone library building with tall windows and a flight of steps on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0109 [indoor] a hallway junction with lockers, notice boards and a drinking fountain in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0110 [outdoor] a row of terraced brick houses along a straight residential street on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0111 [indoor] a computer lab with rows of desks and monitors with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0112 [outdoor] a parking garage entrance with concrete pillars and painted lines on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0113 [indoor] an atrium with a tiled floor, balconies and a glass ceiling with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0114 [outdoor] a pedestrian plaza between two rectangular office buildings in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0115 [indoor] a seminar room with a long table, chairs and a projector screen with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0116 [outdoor] a corner of a city block with a cafe on the ground floor on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0117 [indoor] a building lobby with an elevator bank and a reception desk with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0118 [outdoor] a loading dock behind a warehouse with roll-up doors on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0119 [indoor] a laboratory bench with cabinets above and equipment on the counter with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0120 [outdoor] the brick facade of a university building with rows of rectangular windows on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0121 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0122 [outdoor] a downtown street with three-storey brick storefronts and parked cars in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0123 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0124 [outdoor] a concrete campus building with a covered walkway and square columns in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0125 [indoor] an office with a desk, filing cabinets, bookshelves and a window with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0126 [outdoor] a modern glass office building seen from the sidewalk across the street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0127 [indoor] a stairwell with concrete steps and a metal handrail in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0128 [outdoor] an old stone library building with tall windows and a flight of steps on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0129 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0130 [outdoor] a row of terraced brick houses along a straight residential street on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0131 [indoor] a computer lab with rows of desks and monitors, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0132 [outdoor] a parking garage entrance with concrete pillars and painted lines on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0133 [indoor] an atrium with a tiled floor, balconies and a glass ceiling with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0134 [outdoor] a pedestrian plaza between two rectangular office buildings on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0135 [indoor] a seminar room with a long table, chairs and a projector screen with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0136 [outdoor] a corner of a city block with a cafe on the ground floor in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0137 [indoor] a building lobby with an elevator bank and a reception desk in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0138 [outdoor] a loading dock behind a warehouse with roll-up doors on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0139 [indoor] a laboratory bench with cabinets above and equipment on the counter with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0140 [outdoor] the brick facade of a university building with rows of rectangular windows in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0141 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0142 [outdoor] a downtown street with three-storey brick storefronts and parked cars in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0143 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0144 [outdoor] a concrete campus building with a covered walkway and square columns in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0145 [indoor] an office with a desk, filing cabinets, bookshelves and a window in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0146 [outdoor] a modern glass office building seen from the sidewalk across the street on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0147 [indoor] a stairwell with concrete steps and a metal handrail, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0148 [outdoor] an old stone library building with tall windows and a flight of steps in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0149 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0150 [outdoor] a row of terraced brick houses along a straight residential street on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0151 [indoor] a computer lab with rows of desks and monitors, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0152 [outdoor] a parking garage entrance with concrete pillars and painted lines in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0153 [indoor] an atrium with a tiled floor, balconies and a glass ceiling in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0154 [outdoor] a pedestrian plaza between two rectangular office buildings on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0155 [indoor] a seminar room with a long table, chairs and a projector screen in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0156 [outdoor] a corner of a city block with a cafe on the ground floor in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0157 [indoor] a building lobby with an elevator bank and a reception desk with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0158 [outdoor] a loading dock behind a warehouse with roll-up doors on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0159 [indoor] a laboratory bench with cabinets above and equipment on the counter with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0160 [outdoor] the brick facade of a university building with rows of rectangular windows in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0161 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0162 [outdoor] a downtown street with three-storey brick storefronts and parked cars in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0163 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0164 [outdoor] a concrete campus building with a covered walkway and square columns in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0165 [indoor] an office with a desk, filing cabinets, bookshelves and a window, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0166 [outdoor] a modern glass office building seen from the sidewalk across the street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0167 [indoor] a stairwell with concrete steps and a metal handrail in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0168 [outdoor] an old stone library building with tall windows and a flight of steps in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0169 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0170 [outdoor] a row of terraced brick houses along a straight residential street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0171 [indoor] a computer lab with rows of desks and monitors, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0172 [outdoor] a parking garage entrance with concrete pillars and painted lines on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0173 [indoor] an atrium with a tiled floor, balconies and a glass ceiling with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0174 [outdoor] a pedestrian plaza between two rectangular office buildings on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0175 [indoor] a seminar room with a long table, chairs and a projector screen with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0176 [outdoor] a corner of a city block with a cafe on the ground floor in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0177 [indoor] a building lobby with an elevator bank and a reception desk with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0178 [outdoor] a loading dock behind a warehouse with roll-up doors in bright sunlight with hard shadows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0179 [indoor] a laboratory bench with cabinets above and equipment on the counter with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0180 [outdoor] the brick facade of a university building with rows of rectangular windows on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0181 [indoor] a long corridor in a university building with doors on both sides and fluorescent lights, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0182 [outdoor] a downtown street with three-storey brick storefronts and parked cars on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0183 [indoor] an empty lecture hall with rows of fixed seats and a whiteboard at the front with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0184 [outdoor] a concrete campus building with a covered walkway and square columns on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0185 [indoor] an office with a desk, filing cabinets, bookshelves and a window, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0186 [outdoor] a modern glass office building seen from the sidewalk across the street on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0187 [indoor] a stairwell with concrete steps and a metal handrail with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0188 [outdoor] an old stone library building with tall windows and a flight of steps on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0189 [indoor] a hallway junction with lockers, notice boards and a drinking fountain with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0190 [outdoor] a row of terraced brick houses along a straight residential street in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0191 [indoor] a computer lab with rows of desks and monitors with daylight from the windows, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0192 [outdoor] a parking garage entrance with concrete pillars and painted lines on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0193 [indoor] an atrium with a tiled floor, balconies and a glass ceiling, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0194 [outdoor] a pedestrian plaza between two rectangular office buildings on an overcast afternoon, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0195 [indoor] a seminar room with a long table, chairs and a projector screen with fluorescent lighting, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0196 [outdoor] a corner of a city block with a cafe on the ground floor on a clear day, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0197 [indoor] a building lobby with an elevator bank and a reception desk in the evening with the lights on, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0198 [outdoor] a loading dock behind a warehouse with roll-up doors in the early morning, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people
+0199 [indoor] a laboratory bench with cabinets above and equipment on the counter, photograph taken with a compact digital camera, 4:3, wide angle, realistic, sharp focus, no people

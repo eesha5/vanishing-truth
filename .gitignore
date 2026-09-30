@@ -13,3 +13,14 @@ outputs/
 
 # Office lock files
 ~$*
+
+# Images stay out of git, but prompt lists and per-set provenance are tracked
+!data/
+data/*
+!data/generated/
+data/generated/*
+!data/generated/*.txt
+!data/generated/*/
+data/generated/*/*
+!data/generated/*/README.txt
+!data/generated/*/metadata.jsonl
