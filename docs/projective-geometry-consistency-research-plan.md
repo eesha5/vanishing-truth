@@ -661,6 +661,37 @@ Mann-Whitney on log-f spread: SDXL vs YorkUrban p = 5.6e-5, vs Commons p = 9.8e-
 
 **Methodological lesson for the write-up.** Every focal-length statistic must be built only from VP pairs that are orthogonal by construction. `camera.l3_report`'s `f_spread` and `pairwise_focal` are valid only for a verified-orthogonal triple; `camera.atlanta_focal_consistency` is the safe general-purpose version. The classifier feature-importance result (7.15) leans partly on `f_spread` and `f_boot_cv` and should be re-run with Atlanta features before being quoted.
 
+### 7.23 Frontier models: the tell persists, but the margin narrows and the test is underpowered (2026-09-30)
+
+181 Gemini / "nano banana" images (Google Drive, generated 2026-09-23, via Antigravity) and 51 ChatGPT images, both run from `data/generated/prompts.txt`, index-aligned to the prompt list. `scripts/atlanta_compare.py --out outputs/frontier`; `results/frontier_table.md`, `results/frontier.csv`, `results/frontier.png`.
+
+**Stratum correction, made before running.** `data/generated/prompts.txt` is the **`yorkurban_matched`** stratum (verified: 200/200 positional match against `prompts.yorkurban_matched(200, seed=0)`). The headline SDXL/SD 1.5 sets in 7.21-7.22 are `three_direction_rich`. Comparing the frontier sets against `*_rich` would therefore have confounded model with prompt stratum, and 7.18 showed the stratum moves selection rate by ~18 points. The prompt-matched local references are `sdxl_pilot` and `sd15_pilot` (200 each, `yorkurban_matched`, confirmed from their `metadata.jsonl`), and those are what the frontier models are compared against here.
+
+| | YorkUrban | Commons | SDXL pilot | SD 1.5 pilot | **Gemini** | **GPT-image** |
+|---|---|---|---|---|---|---|
+| selected images | 72 | 121 | 79 | 61 | 58 | 36 |
+| with >= 2 horizontal families | 72 | 120 | 74 | 60 | 54 | 36 |
+| usable for log-f spread | 72 | 120 | 38 | 44 | 31 | 29 |
+| **log-f spread**, median [95 % CI] | **0.142 [0.106, 0.221]** | **0.152 [0.093, 0.220]** | 0.593 [0.355, 0.933] | 0.592 [0.381, 0.841] | **0.338 [0.182, 0.652]** | **0.491 [0.320, 0.634]** |
+| images with an impossible (h,v) pair | 28 % | 44 % | 67 % | 55 % | 61 % | 39 % |
+| Manhattan orthogonality (secondary) | 0.65 | 2.82 | 1.75 | 3.29 | 3.60 | 2.67 |
+| selection rate | 71 % | 34 % | 40 % | 30 % | 32 % | 71 % |
+
+Mann-Whitney on log-f spread, vs YorkUrban / vs Commons: Gemini p = 0.016 / 0.018; GPT-image p = 0.014 / 0.015; SDXL pilot p = 7.1e-5 / 1.1e-4; SD 1.5 pilot p = 2.8e-5 / 2.2e-5.
+
+**1. The geometric tell has not disappeared.** Both frontier models sit significantly above both real references. This is the direct answer to the 2026 claim that current generators have closed the geometric gap: on the Atlanta focal residual they have not.
+
+**2. But the frontier-vs-older comparison is a null, and must be reported as one.** Every pairwise test among the four generators is non-significant: Gemini vs SDXL pilot p = 0.26, vs SD 1.5 pilot p = 0.14; GPT-image vs SDXL pilot p = 0.23, vs SD 1.5 pilot p = 0.15; Gemini vs GPT-image p = 0.92. The point estimates are lower (0.338 / 0.491 vs ~0.59) and the ordering is suggestive, but at n = 29-44 usable images per generated set this does **not** establish that frontier models improved. Do not write "frontier models are better"; write *"still significantly worse than real photographs; not significantly different from SD 1.5 / SDXL at this sample size."*
+
+**3. The evidence against the frontier models is an order of magnitude weaker than against the older ones** (p ~ 0.015 vs p ~ 3e-5), which is partly genuine narrowing and partly the smaller n. Powering this properly is the obvious next experiment: ~250 line-rich images per frontier model, matching 7.21's design, would bring n up to ~110 and settle both questions at once.
+
+**Secondary observations.**
+- GPT-image's impossible-pair rate (39 %) falls *between* the two real references (28 %, 44 %) - on that statistic alone it is not distinguishable from wild real photographs. Its log-f spread is still elevated, which is consistent with 7.21's finding that log-f spread, not the impossible-pair rate, is the discriminating statistic.
+- GPT-image's selection rate (71 %) equals curated real and is more than double Gemini's (32 %). Its images are natively 1448x1086, downsampled to 640 for analysis; 168 of 181 Gemini images are natively 640x480 and are not resampled at all. Higher native resolution plausibly yields cleaner LSD segments and hence more identifiable VP families, so this gap is probably an instrument effect, not a property of the generator.
+- Within the Gemini set, the 12 images at 1200x896 score better than the 168 at 640x480 (median 0.135 vs 0.343) but n = 6 usable and p = 0.365 - far too small to read anything into. The 640-native subset alone gives 0.343 vs 0.338 for the whole set, so the headline is not driven by the resolution mixture.
+
+**Caveat carried forward.** This is the first set in the project whose images were not generated locally, so generation parameters (sampler, guidance, seed, any post-processing or upscaling in the Antigravity / ChatGPT export path) are unknown. The exact model version strings are still to be confirmed; `data/generated/{gemini,gptimage}/README.txt` record what is known and mark the rest.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
