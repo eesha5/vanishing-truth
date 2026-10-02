@@ -205,7 +205,8 @@ def select_manhattan_triple(vps: np.ndarray, width: int, height: int,
 
 
 def atlanta_focal_consistency(vps: np.ndarray, support: np.ndarray, width: int, height: int,
-                              min_support_frac: float = 0.04, vert_tol_deg: float = 30.0) -> dict:
+                              min_support_frac: float = 0.04, vert_tol_deg: float = 30.0,
+                              min_vert_dist: float = 0.0) -> dict:
     """L3 for Atlanta worlds (plan 4.6): several horizontal directions, one
     vertical.  Every horizontal VP is orthogonal to the vertical one, so each
     (horizontal, vertical) pair implies a focal length via
@@ -216,6 +217,14 @@ def atlanta_focal_consistency(vps: np.ndarray, support: np.ndarray, width: int, 
     direction only, never by orthogonality).  Returns the per-pair focal
     estimates, the fraction with f^2 <= 0 (impossible pairs) and the spread
     of log f over the possible pairs.
+
+    `min_vert_dist` (pixels) also requires the vertical VP to lie at least that
+    far from the image centre.  A VP near the centre (the depth VP of a
+    corridor or street seen head-on) has an arbitrary direction from the
+    centre and can pass the direction test by accident; a true vertical VP is
+    only that close for a camera pitched steeply up or down.  Uses position
+    only, never orthogonality or f, so it keeps the rule non-circular.
+    Default 0 = original behaviour (plan 7.25).
     """
     pp = np.array([width / 2.0, height / 2.0])
     tot = float(np.sum(support)) if len(support) else 1.0
@@ -224,6 +233,8 @@ def atlanta_focal_consistency(vps: np.ndarray, support: np.ndarray, width: int, 
     for i in sorted(cand, key=lambda i: -support[i]):
         v = vps[i]
         d = v[:2] - pp * v[2]            # direction from centre (works at infinity)
+        if min_vert_dist > 0 and abs(v[2]) > 1e-12 and np.hypot(*(d / v[2])) < min_vert_dist:
+            continue
         ang = np.degrees(np.arctan2(abs(d[0]), abs(d[1])))   # 0 = vertical
         if ang < vert_tol_deg:
             vert = i

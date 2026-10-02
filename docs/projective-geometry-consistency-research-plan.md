@@ -692,6 +692,49 @@ Mann-Whitney on log-f spread, vs YorkUrban / vs Commons: Gemini p = 0.016 / 0.01
 
 **Caveat carried forward.** This is the first set in the project whose images were not generated locally, so generation parameters (sampler, guidance, seed, any post-processing or upscaling in the Antigravity / ChatGPT export path) are unknown. The exact model version strings are still to be confirmed; `data/generated/{gemini,gptimage}/README.txt` record what is known and mark the rest.
 
+### 7.24 Classifier re-run on valid features; regional analysis shares the Manhattan-fit assumption (2026-10-02)
+
+Follow-up to 7.22, which said the 7.15 feature importances could not be quoted until re-run. `scripts/classify_residuals.py` now uses four geometry groups: L2 (plus VP bootstrap spread), ATLANTA (`logf_spread`, `frac_impossible`, joined from `results/frontier.csv`), MANHATTAN (orthogonality, orthocentre offset) and LOCALITY. It **excludes** `f_spread`, `f_boot_cv` and `n_negative_f2`, which turn VP pairs into focal lengths without knowing the pair is perpendicular.
+
+**Second exclusion, found during this re-run.** Every `reg_*` feature (7.10, regional cameras) gets its per-window camera from `camera.fit_focal`, which picks the one f that makes *all* detected VPs mutually orthogonal. That is the same Manhattan-triple assumption that invalidated `f_spread`. It holds on YorkUrban by construction, but nobody has checked it on Atlanta-world scenes, where a window holding two non-perpendicular horizontal VPs gets a biased f. So the regional result is **unverified, not retracted**: it stays in the record, but it is no longer counted as independent evidence for the focal-coherence thesis until it is re-done with an Atlanta per-window fit.
+
+Random forest, 5-fold CV AUC, geometry features only (`results/classifier_report.md`, all images; `results/classifier_report_selected.md`, admitted images only):
+
+| task | old (7.15) | valid features, all images | valid features, admitted only |
+|---|---|---|---|
+| YorkUrban vs SDXL | 0.915 | 0.875 | 0.903 |
+| YorkUrban vs SD 1.5 | 0.913 | 0.919 | 0.926 |
+| Commons vs SDXL | 0.824 | 0.807 | 0.808 |
+| all real vs all generated | - | 0.804 | 0.833 |
+| HFOV 40-60 matched | ~0.82 | 0.814 | 0.863 |
+
+Dropping the invalid features costs at most 0.04 AUC, so detection from residuals did not rest on them.
+
+**What changes is the interpretation.** The top permutation-importance feature is `orthocenter_offset` (0.114 AUC drop; nothing else above 0.01). That is the distance from the image centre to the principal point implied by the VP triangle. It is a camera property, so it is consistent with the thesis, but it points at the **principal point**, not focal length, and it is a Manhattan measure, so it is only clean on Manhattan scenes such as YorkUrban. The earlier wording, that the classifier importances showed a *focal-length* deficit, leaned on `f_boot_cv` (rank 2 in 7.15) and is withdrawn. Of the "four independent lines of evidence" claimed in 7.20, two now stand cleanly (Atlanta focal consistency; orientation improving with scale while focal coherence does not), one is narrowed (classifier: principal point) and one is unverified (regional).
+
+Single-group AUCs also show a known confound worth stating in any write-up: on YorkUrban vs SDXL the NUISANCE group alone reaches 0.905, because YorkUrban is one camera with one field of view. This is why the Commons and HFOV-matched tasks are the honest numbers.
+
+### 7.25 Two robustness checks on the primary residual: vertical-VP choice and camera tilt (2026-10-02)
+
+Both came from building a per-image figure (`projgeo/explain.py`). `scripts/vertical_guard_sensitivity.py`, `results/vguard.csv`.
+
+**Check 1: a central depth VP picked as "vertical".** `atlanta_focal_consistency` identifies the vertical VP by its direction from the image centre. A VP near the centre (the far end of a corridor seen head-on) has an arbitrary direction from the centre and can pass that test by accident; Gemini prompt 0091 did exactly this (the chosen "vertical" sat 0.07 image heights from the centre and was the ceiling lights receding in depth). New optional `min_vert_dist` requires the vertical VP to be at least that far from the centre. Position only, never orthogonality or f, so it stays non-circular. Default 0 keeps the published behaviour.
+
+Share of admitted images whose chosen vertical VP lies within 1 image height of the centre: YorkUrban 0 %, Commons 5 %, SD 1.5 rich 0 %, SDXL rich 4 %, SDXL pilot 4 %, SD 1.5 pilot 0 %, Gemini 3 %, GPT-image 0 %. With the guard at 0.5 or 1 image height every result holds: real 0.142 / 0.149, SD 1.5 rich 0.465, SDXL rich 0.355, all p <= 1.4e-4 vs both real sets; scaling p = 0.54; Gemini 0.306 / GPT-image 0.491 at p 0.014-0.020 vs real; frontier vs pilots p 0.10-0.27. At 2 image heights the guard starts rejecting genuine verticals in upward-looking real photos (Commons loses 12 %); conclusions still hold.
+
+**Check 2: nearly level cameras.** For a level camera the vertical VP is near infinity and f^2 = -(v_h - p).(v_v - p) multiplies a tiny horizon offset by a huge distance, so noise is amplified; individual focal lengths can come out absurd (2,800-7,300 px on a 640 px image). The ratio between two pairs cancels the distance, but errors in the vertical direction and horizon height still dominate. Generated images are level far more often: share of usable images with the vertical VP > 20 image heights from the centre is 76-80 % for SD 1.5 / SDXL vs 31-51 % for real; median distance 64-79 H vs 10-21 H.
+
+That is a potential confound, and it does not explain the result:
+- Within each set, Spearman rho(distance, log-f spread) is 0.0-0.33, mostly n.s.
+- Keeping only clearly tilted cameras (vertical VP within 50 H; keeps ~80 % of real, ~40 % of generated): YorkUrban 0.135 (n 52), Commons 0.135 (74), SD 1.5 rich 0.423 (23), SDXL rich 0.285 (27); generators vs both real sets p <= 0.008. Pilots: SDXL 0.781, SD 1.5 0.414, p <= 0.006. Frontier: Gemini 0.338 (19) p 0.05-0.07, GPT-image 0.491 (23) p 0.02-0.04.
+- At 20 H and below samples get too small for firm conclusions.
+
+So the primary result is robust to both, with the frontier comparison weakening to borderline on the tilt-restricted subset (underpowered, as already known from 7.23).
+
+**Third weak spot noted, not yet tested.** The Atlanta model treats every non-vertical VP as horizontal. Inclined structures (staircases, ramps, pitched roofs) produce non-horizontal VPs whose pairing with the vertical is invalid; GPT-image prompt 0047 (a staircase) shows it. This affects real and generated images alike and plausibly contributes to the 28-44 % impossible-pair rate in real photos. A horizon-consistency test (horizontal VPs should be collinear, L4) would detect it; not built.
+
+**Consequence for per-image use (demo app).** A single image's Atlanta value is unreliable when the camera is near level; the app should say so rather than report a number with false confidence.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.

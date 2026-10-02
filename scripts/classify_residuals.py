@@ -10,12 +10,19 @@ columns describe the *camera configuration* or the *content* rather than a
 violation of projective geometry, and a classifier that wins on those has not
 detected geometric inconsistency:
 
-  L2        line concurrency residuals
-  L3        single-camera coherence (orthogonality, focal spread, orthocentre)
-  REGIONAL  window-to-window camera disagreement, incl. twin-excess
-  LOCALITY  residual variogram indices
-  NUISANCE  fitted HFOV, distortion k1, segment count, VP counts
-            (configuration / content - reported separately, never in "geometry")
+  L2         line concurrency residuals and VP bootstrap uncertainty
+  ATLANTA    focal consistency over (horizontal, vertical) VP pairs only (plan 7.20)
+  MANHATTAN  three-VP orthogonality and orthocentre (valid measurement, but
+             penalises real non-Manhattan scenes; plan 7.20)
+  LOCALITY   residual variogram indices
+  NUISANCE   fitted HFOV, distortion k1, segment count, VP counts
+             (configuration / content - reported separately, never in "geometry")
+
+Excluded from every geometry condition (plan 7.22, 7.24): features that turn
+VP pairs into focal lengths without knowing the pair is perpendicular -
+f_spread, f_boot_cv, n_negative_f2 - and the REGIONAL group, whose per-window
+camera comes from camera.fit_focal (one f making *all* VPs mutually
+orthogonal), an assumption that is untested on Atlanta-world scenes.
 """
 
 import argparse
@@ -41,16 +48,29 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import roc_auc_score, roc_curve
 
 GROUPS = {
-    "L2": ["l2_rms_deg", "l2_mean_deg", "l2_capped_mean_deg", "l2_unexplained_frac", "n_outliers"],
-    "L3": ["ortho_err_max_deg", "ortho_err_rms_deg", "f_spread", "orthocenter_offset",
-           "n_negative_f2", "ortho_err_max_boot_std", "f_boot_cv", "vp_std_max_deg"],
-    "REGIONAL": ["reg_rot_pairwise_deg", "reg_rot_adjacent_deg", "reg_logf_pairwise",
-                 "reg_radius_rot_deg", "reg_radius_logf", "reg_logf_pairwise_excess",
-                 "reg_radius_logf_excess", "reg_rot_pairwise_deg_excess", "reg_n_windows"],
+    "L2": ["l2_rms_deg", "l2_mean_deg", "l2_capped_mean_deg", "l2_unexplained_frac", "n_outliers",
+           "vp_std_max_deg"],
+    "ATLANTA": ["atl_logf_spread", "atl_frac_impossible"],
+    "MANHATTAN": ["ortho_err_max_deg", "ortho_err_rms_deg", "orthocenter_offset", "ortho_err_max_boot_std"],
     "LOCALITY": ["loc_index", "loc_rho_near", "loc_rho_far", "loc_index_undist"],
-    "NUISANCE": ["hfov_deg", "f_fit", "k1", "n_segments", "n_vps", "n_reliable_vps"],
+    "NUISANCE": ["hfov_deg", "f_fit", "k1", "n_segments", "n_vps", "n_reliable_vps", "atl_n_pairs"],
 }
-GEOMETRY = ["L2", "L3", "REGIONAL", "LOCALITY"]
+GEOMETRY = ["L2", "ATLANTA", "MANHATTAN", "LOCALITY"]
+EXCLUDED = ["f_spread", "f_boot_cv", "n_negative_f2"]   # + every reg_* column, see module docstring
+
+
+def join_atlanta(df, atlanta_csv):
+    """Attach Atlanta residuals (computed only for images that pass the
+    applicability rule) and a `selected` flag."""
+    a = pd.read_csv(atlanta_csv)
+    a["set"] = a.set.replace({"yorkurban": "real"})
+    a = a.rename(columns={"logf_spread": "atl_logf_spread", "frac_impossible": "atl_frac_impossible",
+                          "n_pairs": "atl_n_pairs"})[["set", "path", "atl_logf_spread",
+                                                      "atl_frac_impossible", "atl_n_pairs"]]
+    a["selected"] = True
+    df = df.merge(a, on=["set", "path"], how="left")
+    df["selected"] = df.selected.fillna(False).astype(bool)
+    return df
 
 MODELS = {
     "logistic regression": LogisticRegression(max_iter=2000, C=1.0),
@@ -86,11 +106,17 @@ def main():
     ap.add_argument("--csv", default="results/four_set_summary.csv")
     ap.add_argument("--out", default="outputs/classify")
     ap.add_argument("--hfov-band", nargs=2, type=float, default=[40, 60])
+    ap.add_argument("--atlanta", default="results/frontier.csv",
+                    help="per-image Atlanta residuals (atlanta_compare.py output)")
+    ap.add_argument("--selected-only", action="store_true",
+                    help="only images that pass the applicability rule")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    df = pd.read_csv(args.csv)
+    df = join_atlanta(pd.read_csv(args.csv), args.atlanta)
+    if args.selected_only:
+        df = df[df.selected]
     df["generated"] = df.set.isin(["sd15_pilot", "sdxl_pilot"]).astype(int)
     tasks = {
         "curated real (YorkUrban) vs SDXL": df[df.set.isin(["real", "sdxl_pilot"])],
@@ -102,7 +128,9 @@ def main():
     }
 
     report = {}
-    lines = ["# Geometric-residual classifiers (no pixels)", ""]
+    lines = ["# Geometric-residual classifiers (no pixels)", "",
+             f"Images: {'selected only (pass the applicability rule)' if args.selected_only else 'all'}. "
+             f"Excluded as assumption-dependent: {', '.join(EXCLUDED)}, all reg_* columns.", ""]
     for task, d in tasks.items():
         y = d.generated.values
         feat_geom = [c for g in GEOMETRY for c in GROUPS[g] if c in d]
