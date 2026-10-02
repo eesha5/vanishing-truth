@@ -150,11 +150,16 @@ def table(headers, rows, widths=None, fsize=9.5):
         for r in t.rows:
             for i, w in enumerate(widths):
                 r.cells[i].width = Inches(w)
+    short = len(t.rows) <= 10
     for k, r in enumerate(t.rows):
         trPr = r._tr.get_or_add_trPr()
         trPr.append(OxmlElement("w:cantSplit"))
         if k == 0:
             trPr.append(OxmlElement("w:tblHeader"))
+        if short and k < len(t.rows) - 1:          # a short table stays on one page
+            for c in r.cells:
+                for para_ in c.paragraphs:
+                    para_.paragraph_format.keep_with_next = True
     doc.add_paragraph().paragraph_format.space_after = Pt(0)
     return t
 
@@ -313,6 +318,8 @@ number("O5: Compare generators with real photos under matched content and camera
        "standard classifiers on the residuals.")
 number("O6: Implement the shadow rule as a linear program and validate it on synthetic scenes with a "
        "known light source.")
+number("O7: Build an interactive application that applies the measurement to any uploaded image, "
+       "explains its result, and gives a calibrated score with an honest statement of its accuracy.")
 
 doc.add_heading("3.4 Scope and Limitations", level=2)
 para("Scope. One image at a time. Two line-based rule levels are built and validated in full "
@@ -364,7 +371,10 @@ table(["Objective", "Method used", "How it was validated"],
         "Five-fold cross-validation; bootstrap confidence intervals"],
        ["O6 Shadow rule",
         "Wedge constraints solved as a linear program that minimises the largest violation",
-        "Synthetic scenes with a known sun and injected shadow rotations"]],
+        "Synthetic scenes with a known sun and injected shadow rotations"],
+       ["O7 Demonstration app",
+        "Streamlit app on the same per-image code; calibrated random forest on ten residuals",
+        "Cross-validation, calibration table, leave-one-generator-out test, held-out examples"]],
       widths=[1.4, 3.1, 2.0])
 caption("Table 4.1: Each objective, the method used and the validation performed.")
 
@@ -396,8 +406,9 @@ table(["Component", "Specification"],
         "scikit-learn {c:sklearn}, statsmodels, pandas"],
        ["Generative models", "PyTorch 2.14 with CUDA 13.0; diffusers 0.40; Stable Diffusion 1.5 and "
         "SDXL-base-1.0 with CPU offload to fit in 8 GB"],
-       ["Project code", "projgeo package: lines, vp, camera, selection, explain, locality, regional, "
-        "shadows, distortion, prompts, datasets; 20 automated tests"]],
+       ["Project code", "projgeo package: lines, vp, camera, selection, explain, stats, appmodel, "
+        "locality, regional, shadows, distortion, prompts, datasets; 25 automated tests"],
+       ["Demonstration app", "Streamlit 1.58"]],
       widths=[1.8, 4.7])
 caption("Table 4.3: Hardware and software used.")
 
@@ -477,7 +488,7 @@ para("Prompt design. The generated images copy the content of the real sets. The
      "different prompt set would mix up the effect of the model with the effect of the scene.")
 
 doc.add_heading("4.6 Implementation", level=2)
-para("The system is a Python package with 20 automated tests. Testing is layered. Synthetic scenes "
+para("The system is a Python package with 25 automated tests. Testing is layered. Synthetic scenes "
      "with known cameras check that the estimators find the truth. Violation injectors check that each "
      "residual reacts to its own rule and not to others: one bends line directions to break "
      "concurrency only, one moves a vanishing point so concurrency holds but the camera breaks, one "
@@ -495,6 +506,27 @@ caption("Figure 4.2: Per-image output. Yellow lines belong to the vertical vanis
         "other colour is one horizontal direction, labelled with the focal length it implies. Left: a "
         "York Urban photo whose two directions give 649 and 713 px against a calibrated 675 px. Right: a "
         "ChatGPT image whose two directions give 563 and 260 px, more than a factor of two apart.")
+
+doc.add_heading("4.7 Demonstration Application", level=2)
+para("To show the method working on any image, we built a web application called One Camera or Not? "
+     "with Streamlit. A user uploads one or more images, or picks from seven built-in examples. Each "
+     "image goes through exactly the same code as the results in Section 5 (projgeo.explain), so the "
+     "app and the report cannot disagree.")
+para("For each image the app shows the line families in colour, the focal length each horizontal "
+     "direction implies, and how the disagreement compares with real photos. If the image fails the "
+     "applicability rule, it says \"cannot measure\" and gives the reason in plain words instead of "
+     "guessing. It also warns when a reading is unreliable: a camera held almost perfectly level, or "
+     "an aspect ratio that suggests the image was cropped.")
+para("The app also gives a percentage likely AI-generated. This comes from a random forest "
+     "{c:breiman} trained on ten geometric residuals of 625 admitted images, calibrated with Platt "
+     "scaling on out-of-fold predictions. The training data is 69 per cent AI images, so the "
+     "probability is re-based to a 50/50 prior: the number answers \"if this image were equally "
+     "likely to be real or AI before we looked, how likely is AI given its geometry?\" The seven "
+     "built-in examples were held out of training, so their scores are honest. Its accuracy is "
+     "reported in Section 5.7.")
+figure("app_screenshot.png", 5.6)
+caption("Figure 4.3: The demonstration application with the seven held-out examples loaded: a "
+        "summary ranked by score, and the full result for one image.")
 
 # ================================================================ 5
 doc.add_heading("5. Results and Discussion", level=1)
@@ -726,6 +758,19 @@ para("Two cautions. On York Urban, camera and content features alone reach about
      "the principal point rather than the focal length, and it is a Manhattan measure. On its own, the "
      "Atlanta measure is only a moderate per-image detector (AUC 0.61 to 0.74), even though it "
      "separates the groups very clearly. It is a strong population test and a weak single-image test.")
+para("The application's calibrated score (Section 4.7) was evaluated the same way. Table 5.7 gives its "
+     "accuracy. Its percentages are well calibrated: images shown at 80 to 100 per cent are AI images "
+     "about 80 per cent of the time, and those shown below 20 per cent about 11 per cent of the time. "
+     "ChatGPT images are the hard case, barely better than guessing per image, which matches the "
+     "finding in Section 5.5.1 that their impossible-pair rate looks like a real photo's.")
+table(["Measure", "Value"],
+      [["Cross-validated AUC, all admitted images", "0.80"],
+       ["At the 50 per cent line", "78% of AI images flagged; 71% of real photos cleared"],
+       ["AUC, real photos vs SD 1.5 / SDXL / Gemini / ChatGPT", "0.84 / 0.81 / 0.76 / 0.59"],
+       ["AUC on a generator never seen in training, same order", "0.82 / 0.77 / 0.77 / 0.63"]],
+      widths=[3.6, 2.9])
+caption("Table 5.7: Accuracy of the demonstration application's per-image score, five-fold "
+        "cross-validated on 625 admitted images.")
 
 doc.add_heading("5.8 Shadow Consistency", level=2)
 para("The shadow rule follows the wedge method of Kee, O'Brien and Farid {c:kee}. A shadow point and "
@@ -776,6 +821,7 @@ bullet("A replicated result that generated images are two and a half to three ti
 bullet("Evidence that the newest closed models, Gemini and ChatGPT, still fail this test against both "
        "real sets.")
 bullet("Evidence that a bigger model fixes orientation but not camera coherence.")
+bullet("A working application that applies the method to any image and reports when it cannot.")
 
 doc.add_heading("5.11 Limitations", level=2)
 para("The frontier samples are small (29 and 31 usable images), were made from the less line-rich "
@@ -826,9 +872,11 @@ table(["Finding", "Evidence"],
         "significantly different from SD 1.5 or SDXL yet"],
        ["Readable residuals are competitive detectors",
         "AUC 0.88 to 0.93 against the hand-picked set and 0.81 to 0.86 in the hardest cases, against "
-        "0.88 to 0.94 reported for learned geometric features"]],
+        "0.88 to 0.94 reported for learned geometric features"],
+       ["The method works as a usable tool",
+        "Demonstration app: AUC 0.80, well calibrated, says when it cannot measure an image"]],
       widths=[2.4, 4.1])
-caption("Table 5.7: Summary of the main results.")
+caption("Table 5.8: Summary of the main results.")
 
 # ================================================================ 6
 doc.add_heading("6. References", level=1)
