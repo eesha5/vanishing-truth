@@ -7,7 +7,6 @@ report's results come from, and the score from the model trained by
 `scripts/train_app_model.py` on that code's output.
 """
 
-import hashlib
 import sys
 from pathlib import Path
 

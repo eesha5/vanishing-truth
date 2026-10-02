@@ -1,7 +1,7 @@
 import numpy as np
 
 from projgeo.camera import l3_report, orthocenter, pairwise_focal
-from projgeo.geometry import line_through, to_inhomogeneous
+from projgeo.geometry import to_inhomogeneous
 from projgeo.lines import Segments
 from projgeo.vp import angular_residuals
 

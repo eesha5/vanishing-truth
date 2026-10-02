@@ -37,7 +37,13 @@ def _is_infinite(v: np.ndarray, max_px: float = 1e7) -> bool:
 def pairwise_focal(vps: np.ndarray, pp: np.ndarray) -> list[dict]:
     """Closed-form f^2 from each VP pair.  Uses homogeneous coordinates:
     f^2 w_i w_j = -[(x_i - px w_i)(x_j - px w_j) + (y_i - py w_i)(y_j - py w_j)].
-    A pair with one VP at infinity gives no focal constraint."""
+    A pair with one VP at infinity gives no focal constraint.
+
+    Valid ONLY for a pair whose 3D directions are perpendicular.  Two
+    horizontal VPs are not guaranteed to be (angled streets), which is what
+    invalidated the retracted scaling result (plan 7.22); for a general image
+    use `atlanta_focal_consistency`, which pairs the vertical with each
+    horizontal VP."""
     vps = np.asarray(vps, dtype=float)
     out = []
     K = len(vps)
@@ -71,7 +77,10 @@ def orthogonality_errors(vps: np.ndarray, f: float, pp: np.ndarray) -> np.ndarra
 
 def fit_focal(vps: np.ndarray, pp: np.ndarray, diag: float) -> float:
     """Best single f (pixels): minimizes sum of squared cosines between rays.
-    Search over log f in [0.1, 20] x image diagonal."""
+    Search over log f in [0.1, 20] x image diagonal.
+
+    Assumes ALL the given VPs are mutually perpendicular (a Manhattan
+    triple); on an Atlanta-world image the fitted f is biased (plan 7.24)."""
     def cost(logf):
         r = vp_rays(vps, np.exp(logf), pp)
         K = len(r)
@@ -96,7 +105,13 @@ def orthocenter(vps: np.ndarray):
 
 
 def l3_report(vps: np.ndarray, width: int, height: int) -> dict:
-    """Camera-coherence residuals for up to three VPs."""
+    """Camera-coherence residuals for up to three VPs (the Manhattan test).
+
+    `ortho_err_*` and `orthocenter_offset` measure departure from a
+    perpendicular triple and are valid as such.  `f_spread` and
+    `n_negative_f2` use every VP pair and are meaningful only when the triple
+    is known to be perpendicular; they are excluded from all reported
+    statistics (plan 7.22, 7.24)."""
     vps = np.asarray(vps, dtype=float)
     pp = np.array([width / 2.0, height / 2.0])
     diag = float(np.hypot(width, height))
@@ -204,8 +219,13 @@ def select_manhattan_triple(vps: np.ndarray, width: int, height: int,
     return {"status": "insufficient_vps", "model": "M0", "triple": []}
 
 
+# A VP takes part in the Atlanta test only if its lines carry at least this
+# share of the total supported line length (the published setting).
+ATLANTA_MIN_SUPPORT = 0.08
+
+
 def atlanta_focal_consistency(vps: np.ndarray, support: np.ndarray, width: int, height: int,
-                              min_support_frac: float = 0.04, vert_tol_deg: float = 30.0,
+                              min_support_frac: float = ATLANTA_MIN_SUPPORT, vert_tol_deg: float = 30.0,
                               min_vert_dist: float = 0.0) -> dict:
     """L3 for Atlanta worlds (plan 4.6): several horizontal directions, one
     vertical.  Every horizontal VP is orthogonal to the vertical one, so each

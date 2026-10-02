@@ -23,6 +23,7 @@ import pandas as pd
 from scipy.stats import mannwhitneyu
 from tqdm import tqdm
 
+from projgeo.datasets.folder import image_files
 from projgeo.datasets.yorkurban import YorkUrban
 from projgeo.lines import detect_lsd
 from projgeo.shadows import shadow_consistency
@@ -52,7 +53,7 @@ def run_set(items, label, match_width=640):
 
 def load_folder(folder, sunlit_only, limit):
     folder = Path(folder)
-    files = sorted(p for p in folder.iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
+    files = image_files(folder)
     meta_path = folder / "metadata.jsonl"
     if sunlit_only and meta_path.exists():
         meta = {json.loads(l)["file"]: json.loads(l) for l in meta_path.read_text(encoding="utf-8").splitlines() if l.strip()}

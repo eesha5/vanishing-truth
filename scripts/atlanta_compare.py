@@ -1,81 +1,54 @@
-"""Primary L3 analysis: Atlanta focal consistency (plan 7.20).
+"""Primary analysis: Atlanta focal consistency (plan 7.20, 7.21, 7.23).
 
     python scripts/atlanta_compare.py --real data/real/commons \
         --gen data/generated/sdxl_rich data/generated/sd15_rich --out outputs/atlanta
 
-For every image that passes the residual-independent applicability rule, the
-vertical VP is identified by direction alone and each horizontal VP must imply
-the same focal length with it.  Two statistics:
+For every image that passes the applicability rule, the vertical VP is found
+by direction alone and each horizontal VP must imply the same focal length
+with it.  Two statistics:
 
   * `logf_spread`  - spread of log f over the (horizontal, vertical) pairs;
     0 means every part of the scene agrees on how zoomed in the camera is.
   * `any_impossible` - whether some pair gives f^2 <= 0, i.e. no camera exists
-    for that pair at all.  Reported as a proportion with a Wilson interval,
-    because it is a categorical claim.
+    for that pair.  A proportion with a Wilson interval.
 
 Valid in Manhattan *and* Atlanta worlds, so unlike the three-VP orthogonality
-residual it does not penalise angled streets and multi-frame scenes.
+residual it does not penalise angled streets.  The per-image work is
+`projgeo.explain.explain` with the published setting (no vertical-VP guard).
 """
 
 import argparse
 from pathlib import Path
 
-import cv2
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import mannwhitneyu
-from statsmodels.stats.proportion import proportion_confint
 from tqdm import tqdm
 
-from projgeo.camera import atlanta_focal_consistency, l3_report
+from projgeo.datasets.folder import load_folder
 from projgeo.datasets.yorkurban import YorkUrban
-from projgeo.lines import detect_lsd
-from projgeo.selection import identifiability
-from projgeo.vp import estimate_vps
-
-
-def boot_median_ci(x, n_boot=2000, seed=0):
-    x = np.asarray(x, float)
-    x = x[np.isfinite(x)]
-    if len(x) < 3:
-        return (np.nan, np.nan, np.nan)
-    rng = np.random.default_rng(seed)
-    meds = [np.median(rng.choice(x, len(x), replace=True)) for _ in range(n_boot)]
-    return float(np.median(x)), float(np.percentile(meds, 2.5)), float(np.percentile(meds, 97.5))
+from projgeo.explain import explain
+from projgeo.stats import boot_median_ci, wilson_ci
 
 
 def run_set(items, label, match_width=640):
     rows = []
     for name, img in tqdm(items, desc=label):
-        if match_width and img.shape[1] != match_width:
-            s = match_width / img.shape[1]
-            img = cv2.resize(img, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
-        h, w = img.shape[:2]
-        segs = detect_lsd(img)
-        vpr = estimate_vps(segs, w, h, n_vps=3)
-        if not identifiability(segs, vpr, w, h)["identifiable"]:
+        ex = explain(img, match_width=match_width, min_vert_dist_h=0)
+        if not ex["admitted"]:
             continue
-        vpr5 = estimate_vps(segs, w, h, n_vps=5)
-        atl = atlanta_focal_consistency(vpr5.vps, vpr5.support, w, h, min_support_frac=0.08)
-        l3 = l3_report(vpr.vps, w, h)
+        atl = ex["atlanta"]
         rows.append({"path": name, "set": label,
                      "n_pairs": atl["n_pairs"],
                      "logf_spread": atl["logf_spread"],
                      "frac_impossible": atl["frac_impossible"],
                      "any_impossible": (atl["frac_impossible"] > 0) if np.isfinite(atl["frac_impossible"]) else np.nan,
-                     "ortho_err_max_deg": l3.get("ortho_err_max_deg"),
-                     "hfov_deg": l3.get("hfov_deg")})
+                     "ortho_err_max_deg": ex["l3"].get("ortho_err_max_deg"),
+                     "hfov_deg": ex["l3"].get("hfov_deg")})
     return pd.DataFrame(rows)
-
-
-def load_folder(folder, limit):
-    files = sorted(p for p in Path(folder).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
-    if limit:
-        files = files[:limit]
-    return [(p.name, cv2.imread(str(p))) for p in files]
 
 
 def main():
@@ -106,21 +79,21 @@ def main():
     lines.append("| with >= 2 horizontal families | " +
                  " | ".join(str(len(d)) for d in usable.values()) + " |")
     cells = []
-    for k, d in usable.items():
+    for d in usable.values():
         m, lo, hi = boot_median_ci(d.logf_spread)
         cells.append(f"{m:.3f} [{lo:.3f}, {hi:.3f}]")
     lines.append("| **log-f spread**, median [95% CI] | " + " | ".join(cells) + " |")
     cells = []
-    for k, d in sets.items():
+    for d in sets.values():
         x = d.any_impossible.dropna().astype(bool)
         if len(x) == 0:
             cells.append("-")
             continue
-        lo, hi = proportion_confint(int(x.sum()), len(x), method="wilson")
+        lo, hi = wilson_ci(x.sum(), len(x))
         cells.append(f"{x.mean():.0%} [{lo:.0%}, {hi:.0%}] (n={len(x)})")
     lines.append("| **images with an impossible (h,v) pair** | " + " | ".join(cells) + " |")
     cells = []
-    for k, d in sets.items():
+    for d in sets.values():
         m, lo, hi = boot_median_ci(d.ortho_err_max_deg)
         cells.append(f"{m:.2f} [{lo:.2f}, {hi:.2f}]")
     lines.append("| Manhattan orthogonality (secondary) | " + " | ".join(cells) + " |")
@@ -151,12 +124,10 @@ def main():
     axes[0].legend(fontsize=8)
     axes[0].grid(alpha=.3)
     names = list(sets)
-    vals = [sets[k].any_impossible.dropna().astype(bool).mean() for k in names]
-    errs = np.array([[v - proportion_confint(int(sets[k].any_impossible.dropna().sum()),
-                                             max(len(sets[k].any_impossible.dropna()), 1), method="wilson")[0],
-                      proportion_confint(int(sets[k].any_impossible.dropna().sum()),
-                                         max(len(sets[k].any_impossible.dropna()), 1), method="wilson")[1] - v]
-                     for k, v in zip(names, vals)]).T
+    imp = [sets[k].any_impossible.dropna().astype(bool) for k in names]
+    vals = [x.mean() for x in imp]
+    cis = [wilson_ci(x.sum(), max(len(x), 1)) for x in imp]
+    errs = np.array([[v - lo, hi - v] for v, (lo, hi) in zip(vals, cis)]).T
     axes[1].bar(range(len(names)), vals, yerr=np.abs(errs), capsize=4,
                 color=["#377eb8" if n.startswith("real") else "#e41a1c" for n in names])
     axes[1].set_xticks(range(len(names)))

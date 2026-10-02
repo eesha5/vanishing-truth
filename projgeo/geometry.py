@@ -32,12 +32,6 @@ def line_direction(l: np.ndarray) -> np.ndarray:
     return unit(d)
 
 
-def angle_between_lines_deg(d1: np.ndarray, d2: np.ndarray) -> np.ndarray:
-    """Unsigned angle in [0, 90] between undirected 2D directions."""
-    c = np.abs(np.sum(unit(d1) * unit(d2), axis=-1))
-    return np.degrees(np.arccos(np.clip(c, 0.0, 1.0)))
-
-
 def normalizing_transform(width: int, height: int) -> np.ndarray:
     """T mapping pixels to centered coordinates scaled by half the max side.
 

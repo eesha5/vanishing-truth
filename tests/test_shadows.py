@@ -1,7 +1,6 @@
 """L7 validation on synthetic scenes with a known single light."""
 
 import numpy as np
-import pytest
 
 from projgeo.lines import Segments
 from projgeo.shadows import ShadowPair, light_vp_residual, wedge_feasibility

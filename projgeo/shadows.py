@@ -23,7 +23,7 @@ in pixel units throughout.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 from scipy.optimize import linprog
@@ -212,21 +212,6 @@ def shadow_mask(image: np.ndarray, min_area_frac: float = 0.002,
                             "bbox": stats[i, :4].tolist()} for i in keep],
             "shadow_frac": float((clean > 0).mean()),
             "k_close": k_close, "k_open": k_open}
-
-
-def region_extremes(labels: np.ndarray, comp_id: int, direction: np.ndarray) -> dict:
-    """Extreme points of one component along `direction` (e.g. the estimated
-    shadow direction): the attachment end and the shadow tip, which are the
-    points a shadow-object correspondence is built from."""
-    ys, xs = np.nonzero(labels == comp_id)
-    if xs.size == 0:
-        return {}
-    pts = np.stack([xs, ys], axis=1).astype(float)
-    d = np.asarray(direction, float)
-    d = d / max(np.linalg.norm(d), 1e-9)
-    t = pts @ d
-    return {"near": pts[int(t.argmin())].tolist(), "far": pts[int(t.argmax())].tolist(),
-            "extent_px": float(np.ptp(t)), "n_px": int(xs.size)}
 
 
 # ----------------------------------------------------------------------------

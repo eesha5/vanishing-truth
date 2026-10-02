@@ -5,7 +5,7 @@ import pytest
 
 from projgeo.camera import vp_rays
 from projgeo.pipeline import analyze_segments
-from projgeo.synth import drift_vp, jitter_directions, make_scene, shift_vp
+from projgeo.synth import drift_vp, jitter_directions, make_scene, shift_vp, two_cameras
 
 SEEDS = [0, 1, 2, 3, 4]
 
@@ -76,3 +76,14 @@ def test_bootstrap_uncertainty_small_on_clean_scene():
     assert u["n_boot"] == 20
     assert u["vp_std_max_deg"] < 1.0
     assert rep["L3"]["n_reliable_vps"] == 3
+
+
+def test_regional_disagreement_grows_when_two_cameras_are_spliced():
+    # right half re-aimed at a camera with a different focal length: each half
+    # is a valid camera, so only the regional comparison can see it
+    def f(sc, ratio):
+        rep = analyze_segments(two_cameras(sc, f_ratio=ratio), sc.width, sc.height, n_boot=0)
+        return rep["regional"]["logf_pairwise"]
+    v = _sweep(f, [1.0, 1.3, 1.6, 2.0])
+    assert (np.diff(v) > 0).all(), v
+    assert v[0] < 0.03 and v[-1] > 0.2, v

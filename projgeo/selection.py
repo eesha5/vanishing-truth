@@ -32,7 +32,6 @@ from __future__ import annotations
 import numpy as np
 
 from .camera import vp_rays
-from .geometry import unit
 from .lines import Segments
 from .vp import VPResult, bootstrap_vps
 
@@ -100,15 +99,6 @@ def identifiability(segs: Segments, vpr: VPResult, width: int, height: int,
         out["reasons"].append(f"a family spans only {min(spreads):.2f} of the diagonal")
     out["identifiable"] = not out["reasons"]
     return out
-
-
-def vpr_mean_direction(segs: Segments, mask: np.ndarray) -> np.ndarray:
-    """Length-weighted mean undirected image direction of the masked segments."""
-    d = segs.directions[mask]
-    w = segs.lengths[mask]
-    # undirected: align signs to the first segment before averaging
-    d = d * np.sign(d @ d[0] + 1e-12)[:, None]
-    return unit((w[:, None] * d).sum(axis=0))
 
 
 STANDARD_ASPECTS = (3 / 2, 4 / 3, 16 / 9, 5 / 4, 1.0)

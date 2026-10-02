@@ -31,7 +31,6 @@ def _cost(segs: Segments, vpr: VPResult, width: int, height: int, cap_deg: float
     (uncensored) nearest-assigned segments."""
     T = normalizing_transform(width, height)
     S = segs.transformed(T)
-    Tinv = np.linalg.inv(T)
     tot, wsum = 0.0, 0.0
     for k, v in enumerate(vpr.vps):
         idx = np.flatnonzero((vpr.nearest == k) & (vpr.residuals_all < cap_deg))

@@ -1,10 +1,11 @@
 """One-image explanation of the primary residual (plan 7.20), shared by the
 report figure and the demonstration app.
 
-`explain` follows `scripts/atlanta_compare.run_set` step for step: resample
+`explain` is the one implementation of the per-image measurement: resample
 to 640 px wide, LSD, three-VP estimate for the applicability rule, then a
-five-VP estimate for Atlanta focal consistency.  With `min_vert_dist_h=0` it
-reproduces the published population numbers exactly; the default of 1 image
+five-VP estimate for Atlanta focal consistency.  The population scripts
+(`atlanta_compare.py`, `vertical_guard_sensitivity.py`) and the app all call
+it.  `min_vert_dist_h=0` is the published setting; the default of 1 image
 height adds the vertical-VP guard of plan 7.25, which changes 0-5 % of images
 and no conclusion.
 
@@ -51,12 +52,11 @@ def explain(img_bgr: np.ndarray, match_width: int | None = ANALYSIS_WIDTH,
     if not out["admitted"]:
         return out
     vpr5 = estimate_vps(segs, w, h, n_vps=5)
-    atl = atlanta_focal_consistency(vpr5.vps, vpr5.support, w, h, min_support_frac=0.08,
-                                    min_vert_dist=min_vert_dist_h * h)
+    atl = atlanta_focal_consistency(vpr5.vps, vpr5.support, w, h, min_vert_dist=min_vert_dist_h * h)
     l3 = l3_report(vpr.vps, w, h)
     l2 = vpr.l2_summary()["all"]
-    out.update(vpr=vpr5, atlanta=atl, ortho_err_max_deg=l3.get("ortho_err_max_deg"),
-               vert_dist_h=_vert_dist_h(vpr5.vps, atl["vertical"], w, h))
+    out.update(vpr=vpr5, atlanta=atl, l3=l3, ortho_err_max_deg=l3.get("ortho_err_max_deg"),
+               vert_dist_h=vertical_distance_h(vpr5.vps, atl["vertical"], w, h))
     out["features"] = {
         "l2_rms_deg": l2.get("rms_deg"), "l2_mean_deg": l2.get("mean_deg"),
         "l2_capped_mean_deg": l2.get("capped_mean_deg"),
@@ -70,7 +70,7 @@ def explain(img_bgr: np.ndarray, match_width: int | None = ANALYSIS_WIDTH,
     return out
 
 
-def _vert_dist_h(vps, vert, w, h) -> float:
+def vertical_distance_h(vps, vert, w, h) -> float:
     """Distance of the chosen vertical VP from the image centre, in image heights."""
     if vert is None:
         return float("nan")

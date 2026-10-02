@@ -68,6 +68,8 @@ def join_atlanta(df, atlanta_csv):
                           "n_pairs": "atl_n_pairs"})[["set", "path", "atl_logf_spread",
                                                       "atl_frac_impossible", "atl_n_pairs"]]
     a["selected"] = True
+    # the published Atlanta values win over any older copies already in `df`
+    df = df.drop(columns=[c for c in a.columns if c not in ("set", "path") and c in df.columns])
     df = df.merge(a, on=["set", "path"], how="left")
     df["selected"] = df.selected.fillna(False).astype(bool)
     return df

@@ -13,6 +13,12 @@ because a camera is a global object the restriction maps are identities, so
 
 Camera distance has two components: the rotation angle between the VP frames
 (deg) and |log f_i / f_j|.  Both are reported separately.
+
+Caveat (plan 7.24): each window's focal length comes from
+`camera.fit_focal`, which assumes all the window's VPs are mutually
+perpendicular.  That holds on York Urban by construction but is unverified on
+Atlanta-world scenes, so this analysis is reported but not counted as
+independent evidence.
 """
 
 from __future__ import annotations

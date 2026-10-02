@@ -3,8 +3,8 @@
 
     python scripts/plot_dot_interval.py
 
-Medians use the same bootstrap as atlanta_compare.py (2000 resamples, seed 0)
-and proportions the same Wilson interval, so the figures match the tables.
+Intervals come from projgeo.stats, the same functions atlanta_compare.py uses,
+so the figures match the tables.
 """
 
 from pathlib import Path
@@ -14,20 +14,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from statsmodels.stats.proportion import proportion_confint
+
+from projgeo.stats import boot_median_ci, wilson_ci
 
 # reference palette slots 1-3, validated all-pairs in light mode (dataviz skill)
 GROUP_STYLE = {"real": ("#2a78d6", "o"), "local": ("#eb6834", "s"), "frontier": ("#1baf7a", "D")}
 GROUP_LABEL = {"real": "real photographs", "local": "local open models", "frontier": "frontier closed models"}
 INK, INK2, GRID = "#0b0b0b", "#52514e", "#e4e3df"
-
-
-def boot_median_ci(x, n_boot=2000, seed=0):
-    x = np.asarray(x, float)
-    x = x[np.isfinite(x)]
-    rng = np.random.default_rng(seed)
-    meds = [np.median(rng.choice(x, len(x), replace=True)) for _ in range(n_boot)]
-    return float(np.median(x)), float(np.percentile(meds, 2.5)), float(np.percentile(meds, 97.5))
 
 
 def summarise(df, rows):
@@ -37,7 +30,7 @@ def summarise(df, rows):
         lf = d[d.n_pairs >= 2].logf_spread.replace([np.inf, -np.inf], np.nan).dropna()
         m, lo, hi = boot_median_ci(lf)
         imp = d.any_impossible.dropna().astype(bool)
-        plo, phi = proportion_confint(int(imp.sum()), len(imp), method="wilson")
+        plo, phi = wilson_ci(imp.sum(), len(imp))
         out.append(dict(label=f"{label}\n(n = {len(lf)})", group=group, m=m, lo=lo, hi=hi,
                         p=imp.mean() * 100, plo=plo * 100, phi=phi * 100))
     return out

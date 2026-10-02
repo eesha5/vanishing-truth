@@ -36,7 +36,7 @@ def analyze_segments(segs: Segments, width: int, height: int, n_boot: int = 30,
     l3 = l3_report(vpr.vps, width, height)
     l3_best = select_manhattan_triple(vpr_all.vps, width, height, vpr_all.support)
     l3_best.pop("pairwise_focal", None)
-    l3_atl = atlanta_focal_consistency(vpr_all.vps, vpr_all.support, width, height, min_support_frac=0.12)
+    l3_atl = atlanta_focal_consistency(vpr_all.vps, vpr_all.support, width, height)
     if n_boot and len(vpr.vps):
         samples = bootstrap_vps(segs, vpr, B=n_boot)
         l3["uncertainty"] = l3_uncertainty(vpr.vps, samples, width, height, l3.get("f_fit"))

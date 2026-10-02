@@ -5,64 +5,41 @@ vertical VP?  (plan 7.25)
 
 Re-runs the Atlanta residual on every admitted image with the vertical VP
 required to lie at least k image-heights from the centre, for several k
-(k = 0 is the published behaviour).  Records, per image, how far the
-originally chosen vertical VP was from the centre, so the share of
-suspect choices can be counted per set.
+(k = 0 is the published behaviour).  Also records how far the originally
+chosen vertical VP was from the centre, which is the camera-tilt proxy used
+for the level-camera check.
 """
 
 import argparse
 from pathlib import Path
 
-import cv2
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from projgeo.camera import atlanta_focal_consistency
+from projgeo.datasets.folder import load_folder
 from projgeo.datasets.yorkurban import YorkUrban
-from projgeo.lines import detect_lsd
-from projgeo.selection import identifiability
-from projgeo.vp import estimate_vps
+from projgeo.explain import explain
 
 KS = [0.0, 0.5, 1.0, 2.0]
-
-
-def vert_dist_h(vps, vert, w, h):
-    if vert is None:
-        return np.nan
-    v = vps[vert]
-    if abs(v[2]) < 1e-12:
-        return np.inf
-    return float(np.hypot(*(v[:2] / v[2] - [w / 2, h / 2])) / h)
 
 
 def run(items, label, match_width=640):
     rows = []
     for name, img in tqdm(items, desc=label):
-        if match_width and img.shape[1] != match_width:
-            s = match_width / img.shape[1]
-            img = cv2.resize(img, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
-        h, w = img.shape[:2]
-        segs = detect_lsd(img)
-        if not identifiability(segs, estimate_vps(segs, w, h, n_vps=3), w, h)["identifiable"]:
+        ex = explain(img, match_width=match_width, min_vert_dist_h=0)
+        if not ex["admitted"]:
             continue
-        v5 = estimate_vps(segs, w, h, n_vps=5)
-        row = {"set": label, "path": name}
+        v5, w, h = ex["vpr"], ex["width"], ex["height"]
+        row = {"set": label, "path": name, "vert_dist_h": ex["vert_dist_h"]}
         for k in KS:
-            a = atlanta_focal_consistency(v5.vps, v5.support, w, h, min_support_frac=0.08,
-                                          min_vert_dist=k * h)
-            if k == 0:
-                row["vert_dist_h"] = vert_dist_h(v5.vps, a["vertical"], w, h)
+            a = ex["atlanta"] if k == 0 else atlanta_focal_consistency(
+                v5.vps, v5.support, w, h, min_vert_dist=k * h)
             row[f"n_pairs_k{k}"] = a["n_pairs"]
             row[f"logf_k{k}"] = a["logf_spread"]
             row[f"imp_k{k}"] = a["frac_impossible"]
         rows.append(row)
     return pd.DataFrame(rows)
-
-
-def folder(d):
-    fs = sorted(p for p in Path(d).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
-    return [(p.name, cv2.imread(str(p))) for p in fs]
 
 
 def main():
@@ -75,9 +52,9 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     parts = [run([(im.name, im.image) for im in YorkUrban("data/real/YorkUrbanDB")], "yorkurban", None),
-             run(folder("data/real/commons"), "real-commons")]
+             run(load_folder("data/real/commons"), "real-commons")]
     for g in args.gen:
-        parts.append(run(folder(g), Path(g).name))
+        parts.append(run(load_folder(g), Path(g).name))
     df = pd.concat(parts, ignore_index=True)
     df.to_csv(out / "vguard.csv", index=False)
     print("written", out / "vguard.csv", len(df))

@@ -19,6 +19,7 @@ import pandas as pd
 from scipy.stats import mannwhitneyu
 from tqdm import tqdm
 
+from projgeo.datasets.folder import load_folder
 from projgeo.datasets.yorkurban import YorkUrban
 from projgeo.distortion import fit_radial_k1
 from projgeo.lines import detect_lsd
@@ -97,21 +98,12 @@ def main():
     ds = YorkUrban(args.real_root)
     sets = {REAL: run_set([(im.name, im.image) for im in ds], "real", None)}
     for g in args.real_extra:
-        files = sorted(p for p in Path(g).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
-        if args.limit:
-            files = files[:args.limit]
-        imgs = [(p.name, cv2.imread(str(p))) for p in files]
-        sets["real-" + Path(g).name] = run_set(imgs, "real-" + Path(g).name, match_w)
+        sets["real-" + Path(g).name] = run_set(load_folder(g, args.limit), "real-" + Path(g).name, match_w)
     for g in args.gen:
-        files = sorted(p for p in Path(g).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
-        if args.limit:
-            files = files[:args.limit]
-        imgs = [(p.name, cv2.imread(str(p))) for p in files]
-        sets[Path(g).name] = run_set(imgs, Path(g).name, match_w)
+        sets[Path(g).name] = run_set(load_folder(g, args.limit), Path(g).name, match_w)
 
     df = pd.concat([d for d, _ in sets.values()], ignore_index=True)
     df.to_csv(out / "summary.csv", index=False)
-    real = sets[REAL][0]
 
     def build_table(frames, title):
         real_f = frames[REAL]

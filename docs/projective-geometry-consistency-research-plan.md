@@ -751,6 +751,8 @@ Random forest on ten geometry-only features from `explain.explain` (L2 x4, VP bo
 
 **Reading.** Per-image detection is moderate and well calibrated. ChatGPT images are barely separable per image (0.59 to 0.63), consistent with 7.23 (its impossible-pair rate sits between the two real sets). This is the per-image counterpart of the population result: a strong group difference does not make a strong single-image detector. On a generator never seen in training the score keeps most of its power for SD 1.5, SDXL and Gemini.
 
+**Code note (2026-10-02, cleanup).** `projgeo/explain.py` is now the only implementation of the per-image Atlanta measurement; `atlanta_compare.py` and `vertical_guard_sensitivity.py` call it, and a full re-run reproduced `results/frontier.csv` and its table exactly. The Atlanta support threshold is one constant, `camera.ATLANTA_MIN_SUPPORT = 0.08`; `pipeline.analyze_segments` previously used 0.12 for its own `L3_atlanta` copy, so the exploratory Atlanta numbers in 7.20's first table (from that path) would differ slightly on a re-run. Nothing reported since 7.21 used that path.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.

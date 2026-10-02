@@ -1,73 +1,30 @@
-"""Locality analysis: does geometric consistency degrade with image distance?
+"""Locality analysis: is the inconsistency a smooth drift across the image?
 
-Central hypothesis of the project (plan §3.5A, §7.4): generators are
-*locally* consistent (nearby lines agree on a VP) but lack a *global* camera
-(distant lines disagree).  Two estimators of "consistency vs separation":
+Hypothesis tested (plan 3.5A, 7.4): a generator might be locally consistent
+but drift gradually, so that lines of one family aim at slightly different
+VPs depending on where they sit.  That would show up as spatially correlated
+residuals.
 
-1. `pairwise_locality` — for two inlier segments of the same VP, their
-   intersection is a local two-line VP estimate; we measure its ray-space
-   angle to the global VP as a function of the distance between the segments.
-   Known confound: nearby, nearly-parallel segments give ill-conditioned
-   intersections, so *estimator* noise is largest at small separation and
-   falls with distance — opposite to the hypothesised trend.  The angle
-   between the two segments is returned so the curve can be stratified by
-   conditioning, and the real-photo control curve carries the same confound.
+* `residual_variogram` - correlation of signed angular residuals between
+  segments of the same family, as a function of their distance.  A smooth
+  drift makes near pairs agree more than far pairs.
+* `consistent_twin` - the same segments re-aimed at the global VPs: one
+  camera by construction, with the same layout and line counts.  Its
+  statistics are the noise floor that any real excess is measured against
+  (used by the regional analysis in `pipeline.py`).
 
-2. `windowed_locality` — estimate VPs independently inside image windows and
-   measure how much window-local VPs disagree with each other versus the
-   distance between window centres.  Closer to the sheaf formulation (§4.4):
-   windows are local sections, agreement on overlaps is the gluing condition.
+Outcome: the variogram index is at chance for real and generated images in
+every set, so the failure is disagreement between regions and structures,
+not a smooth warp (report section 5.6).
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-from .camera import vp_rays
 from .geometry import unit
 from .lines import Segments
-from .vp import VPResult, estimate_vps
-
-
-def _ray_angle_deg(a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    c = np.clip(np.abs(np.sum(unit(a) * unit(b), axis=-1)), 0, 1)
-    return np.degrees(np.arccos(c))
-
-
-def pairwise_locality(segs: Segments, vpr: VPResult, f: float, width: int, height: int,
-                      max_pairs_per_vp: int = 3000, seed: int = 0) -> dict:
-    """Returns arrays over sampled same-VP segment pairs:
-    dist (midpoint distance / image diagonal), disagreement (deg, ray space),
-    pair_angle (deg between the two segments; small = ill-conditioned), vp (id)."""
-    rng = np.random.default_rng(seed)
-    pp = np.array([width / 2.0, height / 2.0])
-    diag = float(np.hypot(width, height))
-    L = segs.lines
-    M = segs.midpoints
-    D = segs.directions
-    out = {"dist": [], "disagreement": [], "pair_angle": [], "vp": []}
-    for k, v in enumerate(vpr.vps):
-        idx = np.flatnonzero(vpr.labels == k)
-        if idx.size < 4:
-            continue
-        n_pairs = idx.size * (idx.size - 1) // 2
-        if n_pairs <= max_pairs_per_vp:
-            ii, jj = np.triu_indices(idx.size, k=1)
-        else:
-            ii = rng.integers(0, idx.size, max_pairs_per_vp)
-            jj = rng.integers(0, idx.size, max_pairs_per_vp)
-            keep = ii != jj
-            ii, jj = ii[keep], jj[keep]
-        a, b = idx[ii], idx[jj]
-        p = np.cross(L[a], L[b])                       # local two-line VP
-        gr = vp_rays(v[None], f, pp)[0]
-        pr = vp_rays(p, f, pp)
-        out["disagreement"].append(_ray_angle_deg(pr, gr[None]))
-        out["dist"].append(np.linalg.norm(M[a] - M[b], axis=1) / diag)
-        c = np.clip(np.abs(np.sum(D[a] * D[b], axis=1)), 0, 1)
-        out["pair_angle"].append(np.degrees(np.arccos(c)))
-        out["vp"].append(np.full(a.size, k))
-    return {k: (np.concatenate(v) if v else np.zeros(0)) for k, v in out.items()}
+from .vp import VPResult
 
 
 def bin_curve(dist: np.ndarray, val: np.ndarray, edges: np.ndarray, stat=np.nanmedian) -> np.ndarray:
@@ -79,49 +36,6 @@ def bin_curve(dist: np.ndarray, val: np.ndarray, edges: np.ndarray, stat=np.nanm
         if m.sum() >= 5:
             out[b] = stat(val[m])
     return out
-
-
-def windowed_locality(segs: Segments, vpr: VPResult, f: float, width: int, height: int,
-                      grid: int = 2, min_segments: int = 25, thresh_deg: float = 2.0) -> dict:
-    """Estimate VPs inside each grid cell from that cell's segments only, match
-    them to the global VPs (by ray angle at the global f) and return, for every
-    pair of cells that both recovered a given global VP, the distance between
-    cell centres (/diag) and the ray-space disagreement of their local VPs."""
-    pp = np.array([width / 2.0, height / 2.0])
-    diag = float(np.hypot(width, height))
-    M = segs.midpoints
-    G = vp_rays(vpr.vps, f, pp)
-    cells = []
-    for gy in range(grid):
-        for gx in range(grid):
-            x0, x1 = gx * width / grid, (gx + 1) * width / grid
-            y0, y1 = gy * height / grid, (gy + 1) * height / grid
-            m = (M[:, 0] >= x0) & (M[:, 0] < x1) & (M[:, 1] >= y0) & (M[:, 1] < y1)
-            if m.sum() < min_segments:
-                continue
-            local = estimate_vps(segs[m], width, height, n_vps=len(vpr.vps),
-                                 thresh_deg=thresh_deg, n_iter=300)
-            if len(local.vps) == 0:
-                continue
-            R = vp_rays(local.vps, f, pp)
-            ang = np.degrees(np.arccos(np.clip(np.abs(R @ G.T), 0, 1)))   # (local, global)
-            match = {}
-            for k in range(len(G)):
-                j = int(ang[:, k].argmin())
-                if ang[j, k] < 10 and int(ang[j].argmin()) == k:
-                    match[k] = R[j]
-            cells.append({"centre": np.array([(x0 + x1) / 2, (y0 + y1) / 2]),
-                          "match": match, "local_err": {k: float(ang[:, k].min()) for k in range(len(G))}})
-    dist, dis, vp = [], [], []
-    for i in range(len(cells)):
-        for j in range(i + 1, len(cells)):
-            for k in cells[i]["match"].keys() & cells[j]["match"].keys():
-                dist.append(np.linalg.norm(cells[i]["centre"] - cells[j]["centre"]) / diag)
-                dis.append(_ray_angle_deg(cells[i]["match"][k], cells[j]["match"][k]))
-                vp.append(k)
-    return {"dist": np.array(dist), "disagreement": np.array(dis), "vp": np.array(vp),
-            "n_cells": len(cells),
-            "local_vs_global": np.array([c["local_err"][k] for c in cells for k in c["local_err"]])}
 
 
 def consistent_twin(segs: Segments, vpr: VPResult, seed: int = 0,
@@ -169,32 +83,6 @@ def consistent_twin(segs: Segments, vpr: VPResult, seed: int = 0,
     return Segments(xy)
 
 
-def locality_excess(segs: Segments, vpr: VPResult, f: float, width: int, height: int,
-                    edges: np.ndarray, grid: int = 3, n_twins: int = 3,
-                    min_pair_angle: float = 3.0, seed: int = 0) -> dict:
-    """Image-minus-twin locality curves (pairwise and windowed).  Twin curves
-    are averaged over `n_twins` noise draws.  Returns per-bin arrays."""
-    pw = pairwise_locality(segs, vpr, f, width, height, seed=seed)
-    ok = pw["pair_angle"] > min_pair_angle
-    pw_img = bin_curve(pw["dist"][ok], pw["disagreement"][ok], edges)
-    wl = windowed_locality(segs, vpr, f, width, height, grid=grid)
-    wl_img = bin_curve(wl["dist"], wl["disagreement"], edges)
-    pw_tw, wl_tw = [], []
-    for t in range(n_twins):
-        twin = consistent_twin(segs, vpr, seed=seed + t)
-        p = pairwise_locality(twin, vpr, f, width, height, seed=seed)
-        ok = p["pair_angle"] > min_pair_angle
-        pw_tw.append(bin_curve(p["dist"][ok], p["disagreement"][ok], edges))
-        w = windowed_locality(twin, vpr, f, width, height, grid=grid)
-        wl_tw.append(bin_curve(w["dist"], w["disagreement"], edges))
-    pw_tw = np.nanmean(pw_tw, axis=0)
-    wl_tw = np.nanmean(wl_tw, axis=0)
-    return {"edges": edges, "pairwise_img": pw_img, "pairwise_twin": pw_tw,
-            "pairwise_excess": pw_img - pw_tw,
-            "windowed_img": wl_img, "windowed_twin": wl_tw, "windowed_excess": wl_img - wl_tw,
-            "n_window_pairs": int(wl["dist"].size)}
-
-
 # ----------------------------------------------------------------------------
 # Residual variogram: the cleanest locality statistic.
 # ----------------------------------------------------------------------------
@@ -237,7 +125,7 @@ def residual_variogram(segs: Segments, vpr: VPResult, width: int, height: int,
     M = segs.midpoints
     Ln = segs.lines
     D = segs.directions
-    dist, sq, var_w = [], [], []
+    dist, sq = [], []
     use_nearest = vpr.nearest is not None and vpr.residuals_all is not None
     for k, v in enumerate(vpr.vps):
         if use_nearest:

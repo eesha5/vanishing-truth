@@ -22,12 +22,12 @@ import cv2
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.base import clone
 from sklearn.metrics import brier_score_loss, roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 
 from projgeo.appmodel import MODEL_PATH, feature_matrix, make_model, rebase
+from projgeo.datasets.folder import image_files
 from projgeo.datasets.yorkurban import YorkUrban
 from projgeo.explain import FEATURES, explain
 
@@ -51,9 +51,8 @@ def images(src):
         for im in YorkUrban("data/real/YorkUrbanDB"):
             yield im.name, im.image, None
         return
-    for p in sorted(Path(src).iterdir()):
-        if p.suffix.lower() in (".png", ".jpg", ".jpeg"):
-            yield p.name, cv2.imread(str(p)), 640
+    for p in image_files(src):
+        yield p.name, cv2.imread(str(p)), 640
 
 
 def compute_features():
