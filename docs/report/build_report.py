@@ -81,6 +81,21 @@ st.paragraph_format.line_spacing = 1.15
 for sec in doc.sections:
     sec.top_margin = sec.bottom_margin = Inches(1)
     sec.left_margin = sec.right_margin = Inches(1)
+# page numbers, centred in the footer, not on the title page
+_sec = doc.sections[0]
+_sec.different_first_page_header_footer = True
+_fp = _sec.footer.paragraphs[0]
+_fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+for _kind, _text in (("begin", None), (None, "PAGE"), ("end", None)):
+    _r = _fp.add_run()
+    if _kind:
+        _el = OxmlElement("w:fldChar")
+        _el.set(qn("w:fldCharType"), _kind)
+    else:
+        _el = OxmlElement("w:instrText")
+        _el.set(qn("xml:space"), "preserve")
+        _el.text = _text
+    _r._r.append(_el)
 for name, size in (("Heading 1", 16), ("Heading 2", 13), ("Heading 3", 12)):
     s = doc.styles[name]
     s.font.name = "Times New Roman"
