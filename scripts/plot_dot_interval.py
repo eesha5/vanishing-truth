@@ -36,10 +36,11 @@ def summarise(df, rows):
     return out
 
 
-def plot(rows, path, title):
+def plot(rows, path, title, width=10.5, fs=1.0, row_h=0.62, pad_h=1.5):
+    """fs scales every font and mark; the slide versions use a narrower figure and fs > 1."""
     n = len(rows)
     y = np.arange(n)[::-1]
-    fig, axes = plt.subplots(1, 2, figsize=(10.5, 0.62 * n + 1.5), sharey=True,
+    fig, axes = plt.subplots(1, 2, figsize=(width, row_h * n + pad_h), sharey=True,
                              gridspec_kw={"width_ratios": [1.25, 1]})
     real = [r for r in rows if r["group"] == "real"]
     for ax, (k, klo, khi, xlabel, fmt) in zip(axes, [
@@ -49,29 +50,31 @@ def plot(rows, path, title):
         ax.axvspan(lo_band, hi_band, color=GROUP_STYLE["real"][0], alpha=0.08, lw=0)
         for yi, r in zip(y, rows):
             c, mk = GROUP_STYLE[r["group"]]
-            ax.plot([r[klo], r[khi]], [yi, yi], color=c, lw=2, solid_capstyle="round", zorder=2)
-            ax.plot(r[k], yi, mk, color=c, ms=8, mec="white", mew=1.5, zorder=3)
-            ax.text(r[k], yi + 0.2, fmt.format(r[k]), color=INK2, fontsize=8.5, ha="center", va="bottom")
-        ax.set_xlabel(xlabel, color=INK, fontsize=9.5)
+            ax.plot([r[klo], r[khi]], [yi, yi], color=c, lw=2 * fs, solid_capstyle="round", zorder=2)
+            ax.plot(r[k], yi, mk, color=c, ms=8 * fs, mec="white", mew=1.5, zorder=3)
+            ax.text(r[k], yi + 0.2, fmt.format(r[k]), color=INK2, fontsize=8.5 * fs, ha="center", va="bottom")
+        # slide versions are narrower with bigger type: break the label so the two panels' labels don't meet
+        ax.set_xlabel(xlabel.replace(" (", "\n(") if fs > 1 else xlabel, color=INK, fontsize=9.5 * fs)
         ax.grid(axis="x", color=GRID, lw=0.8)
         ax.set_axisbelow(True)
         for s in ("top", "right", "left"):
             ax.spines[s].set_visible(False)
         ax.spines["bottom"].set_color(INK2)
-        ax.tick_params(colors=INK2, labelsize=8.5, length=0)
+        ax.tick_params(colors=INK2, labelsize=8.5 * fs, length=0)
         ax.set_ylim(-0.7, n - 0.3)
     axes[0].set_xlim(left=0)
     axes[1].set_xlim(0, 100)
     axes[0].set_yticks(y)
-    axes[0].set_yticklabels([r["label"] for r in rows], color=INK, fontsize=9)
+    axes[0].set_yticklabels([r["label"] for r in rows], color=INK, fontsize=9 * fs)
     present = list(dict.fromkeys(r["group"] for r in rows))
-    handles = [plt.Line2D([], [], color=GROUP_STYLE[g][0], marker=GROUP_STYLE[g][1], ms=7, lw=2,
+    handles = [plt.Line2D([], [], color=GROUP_STYLE[g][0], marker=GROUP_STYLE[g][1], ms=7 * fs, lw=2 * fs,
                           label=GROUP_LABEL[g]) for g in present]
     handles.append(plt.Rectangle((0, 0), 1, 1, color=GROUP_STYLE["real"][0], alpha=0.15,
                                  label="range of the real-photo intervals"))
-    fig.legend(handles=handles, loc="upper center", ncol=len(handles), frameon=False, fontsize=8.5,
+    ncol = 2 if fs > 1 and len(handles) > 3 else len(handles)     # a long legend would widen a slide figure
+    fig.legend(handles=handles, loc="upper center", ncol=ncol, frameon=False, fontsize=8.5 * fs,
                bbox_to_anchor=(0.55, 1.0))
-    fig.suptitle(title, x=0.55, y=1.07, fontsize=11, color=INK)
+    fig.suptitle(title, x=0.55, y=1.07, fontsize=11 * fs, color=INK)
     fig.tight_layout()
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -79,15 +82,18 @@ def plot(rows, path, title):
 
 
 def main():
-    rich = pd.read_csv("outputs/atlanta_scaling/atlanta.csv")
-    plot(summarise(rich, [("yorkurban", "York Urban", "real"), ("real-commons", "Commons", "real"),
-                          ("sd15_rich", "SD 1.5", "local"), ("sdxl_rich", "SDXL", "local")]),
-         Path("results/atlanta_dots.png"), "Primary result: line-rich prompt set")
-    fr = pd.read_csv("results/frontier.csv")
-    plot(summarise(fr, [("yorkurban", "York Urban", "real"), ("real-commons", "Commons", "real"),
-                        ("sdxl_pilot", "SDXL", "local"), ("sd15_pilot", "SD 1.5", "local"),
-                        ("gemini", "Gemini", "frontier"), ("gptimage", "ChatGPT", "frontier")]),
-         Path("results/frontier_dots.png"), "Frontier models: first prompt set")
+    rich = summarise(pd.read_csv("results/atlanta_scaling.csv"),
+                     [("yorkurban", "York Urban", "real"), ("real-commons", "Commons", "real"),
+                      ("sd15_rich", "SD 1.5", "local"), ("sdxl_rich", "SDXL", "local")])
+    fr = summarise(pd.read_csv("results/frontier.csv"),
+                   [("yorkurban", "York Urban", "real"), ("real-commons", "Commons", "real"),
+                    ("sdxl_pilot", "SDXL", "local"), ("sd15_pilot", "SD 1.5", "local"),
+                    ("gemini", "Gemini", "frontier"), ("gptimage", "ChatGPT", "frontier")])
+    for rows, name, title in [(rich, "atlanta_dots", "Primary result: line-rich prompt set"),
+                              (fr, "frontier_dots", "Frontier models: first prompt set")]:
+        plot(rows, Path(f"results/{name}.png"), title)                       # report
+        plot(rows, Path(f"results/{name}_slide.png"), title, width=8.0, fs=1.4,  # slides
+             row_h=0.58, pad_h=1.5)
 
 
 if __name__ == "__main__":
