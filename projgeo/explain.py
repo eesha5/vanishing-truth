@@ -1,10 +1,19 @@
 """One-image explanation of the primary residual (plan 7.20), shared by the
 report figure and the demonstration app.
 
-`explain` follows `scripts/atlanta_compare.run_set` step for step, so the
-numbers shown for a single image are exactly the numbers that enter the
-population statistics: resample to 640 px wide, LSD, three-VP estimate for
-the applicability rule, then a five-VP estimate for Atlanta focal consistency.
+`explain` follows `scripts/atlanta_compare.run_set` step for step: resample
+to 640 px wide, LSD, three-VP estimate for the applicability rule, then a
+five-VP estimate for Atlanta focal consistency.  With `min_vert_dist_h=0` it
+reproduces the published population numbers exactly; the default of 1 image
+height adds the vertical-VP guard of plan 7.25, which changes 0-5 % of images
+and no conclusion.
+
+It also returns `features`, the geometry-only residual vector the demo
+app's classifier is trained on (`scripts/train_app_model.py`), so training
+and serving share one code path.  Camera levelness (`vert_dist_h`) is
+returned for the reliability warning but is deliberately *not* a feature:
+generated images are level more often (plan 7.25), which is a style cue,
+not a violation of projective geometry.
 """
 
 import cv2
@@ -20,7 +29,14 @@ VERTICAL_COLOUR = "#ffd400"
 HORIZONTAL_COLOURS = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00"]
 
 
-def explain(img_bgr: np.ndarray, match_width: int | None = ANALYSIS_WIDTH) -> dict:
+FEATURES = ["l2_rms_deg", "l2_mean_deg", "l2_capped_mean_deg", "l2_unexplained_frac",
+            "vp_std_max_deg", "ortho_err_max_deg", "ortho_err_rms_deg", "orthocenter_offset",
+            "atl_logf_spread", "atl_frac_impossible"]
+LEVEL_CAMERA_H = 50.0      # vertical VP farther than this (image heights): focal values unreliable
+
+
+def explain(img_bgr: np.ndarray, match_width: int | None = ANALYSIS_WIDTH,
+            min_vert_dist_h: float = 1.0) -> dict:
     img = img_bgr
     if match_width and img.shape[1] != match_width:
         s = match_width / img.shape[1]
@@ -31,14 +47,37 @@ def explain(img_bgr: np.ndarray, match_width: int | None = ANALYSIS_WIDTH) -> di
     ident = identifiability(segs, vpr, w, h)
     out = {"img": img, "width": w, "height": h, "segs": segs, "n_segments": len(segs),
            "admitted": bool(ident["identifiable"]), "reasons": list(ident["reasons"]),
-           "vpr": vpr, "atlanta": None}
+           "vpr": vpr, "atlanta": None, "features": None, "vert_dist_h": float("nan")}
     if not out["admitted"]:
         return out
     vpr5 = estimate_vps(segs, w, h, n_vps=5)
-    atl = atlanta_focal_consistency(vpr5.vps, vpr5.support, w, h, min_support_frac=0.08)
-    out.update(vpr=vpr5, atlanta=atl,
-               ortho_err_max_deg=l3_report(vpr.vps, w, h).get("ortho_err_max_deg"))
+    atl = atlanta_focal_consistency(vpr5.vps, vpr5.support, w, h, min_support_frac=0.08,
+                                    min_vert_dist=min_vert_dist_h * h)
+    l3 = l3_report(vpr.vps, w, h)
+    l2 = vpr.l2_summary()["all"]
+    out.update(vpr=vpr5, atlanta=atl, ortho_err_max_deg=l3.get("ortho_err_max_deg"),
+               vert_dist_h=_vert_dist_h(vpr5.vps, atl["vertical"], w, h))
+    out["features"] = {
+        "l2_rms_deg": l2.get("rms_deg"), "l2_mean_deg": l2.get("mean_deg"),
+        "l2_capped_mean_deg": l2.get("capped_mean_deg"),
+        "l2_unexplained_frac": l2.get("unexplained_frac"),
+        "vp_std_max_deg": float(np.max(ident["vp_std_deg"])) if ident.get("vp_std_deg") else np.nan,
+        "ortho_err_max_deg": l3.get("ortho_err_max_deg"), "ortho_err_rms_deg": l3.get("ortho_err_rms_deg"),
+        "orthocenter_offset": l3.get("orthocenter_offset"),
+        "atl_logf_spread": atl["logf_spread"], "atl_frac_impossible": atl["frac_impossible"],
+    }
+    out["features"] = {k: (float(v) if v is not None else np.nan) for k, v in out["features"].items()}
     return out
+
+
+def _vert_dist_h(vps, vert, w, h) -> float:
+    """Distance of the chosen vertical VP from the image centre, in image heights."""
+    if vert is None:
+        return float("nan")
+    v = vps[vert]
+    if abs(v[2]) < 1e-12:
+        return float("inf")
+    return float(np.hypot(*(v[:2] / v[2] - [w / 2, h / 2])) / h)
 
 
 def directions(ex: dict) -> list[dict]:

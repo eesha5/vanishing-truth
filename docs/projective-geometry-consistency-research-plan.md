@@ -735,6 +735,22 @@ So the primary result is robust to both, with the frontier comparison weakening 
 
 **Consequence for per-image use (demo app).** A single image's Atlanta value is unreliable when the camera is near level; the app should say so rather than report a number with false confidence.
 
+### 7.26 Per-image scoring for the demo app: calibrated, honest, and weak on ChatGPT (2026-10-02)
+
+`app/streamlit_app.py`, `projgeo/appmodel.py`, `scripts/train_app_model.py`, `results/app_model_report.md`, features in `results/app_features.csv`.
+
+Random forest on ten geometry-only features from `explain.explain` (L2 x4, VP bootstrap spread, Manhattan x3 incl. orthocentre offset, Atlanta logf spread and impossible fraction; vertical-VP guard at 1 image height). Camera levelness deliberately excluded (style cue, 7.25). Platt-calibrated on out-of-fold predictions, then re-based from the training prior (69 % generated) to 50/50. Trained on the 625 admitted images of 1,592 across eight sets, after holding out the seven demo examples.
+
+| | value |
+|---|---|
+| 5-fold CV AUC | 0.796 |
+| at the 50 % line | 78 % of generated called generated, 71 % of real called real |
+| calibration (shown band -> observed share generated, 50/50 weighting) | 0-20 % -> 11 %, 20-40 % -> 32 %, 40-60 % -> 49 %, 60-80 % -> 74 %, 80-100 % -> 79 % |
+| AUC real vs SD 1.5 / SDXL / Gemini / ChatGPT | 0.838 / 0.812 / 0.756 / 0.592 |
+| leave-one-generator-out AUC, same order | 0.822 / 0.771 / 0.766 / 0.627 |
+
+**Reading.** Per-image detection is moderate and well calibrated. ChatGPT images are barely separable per image (0.59 to 0.63), consistent with 7.23 (its impossible-pair rate sits between the two real sets). This is the per-image counterpart of the population result: a strong group difference does not make a strong single-image detector. On a generator never seen in training the score keeps most of its power for SD 1.5, SDXL and Gemini.
+
 ### 7.5 Follow-up paper: human perception of geometric violations (Gap 6)
 
 If paper 1 succeeds: psychophysics study pairing human ratings with measured residuals. Question: *which violations are mathematically severe but visually unnoticed, and vice versa?* Separates forensically detectable from perceptually salient errors, and gives a perceptual weighting for any aggregate score. Needs ethics approval, a stimulus set drawn from the paper-1 corpus with known residuals, and a 2AFC or rating design. Related: §3.5D.
