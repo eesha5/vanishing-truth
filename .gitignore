@@ -28,3 +28,4 @@ data/generated/*/*
 # Local tool settings
 .claude/
 .ruff_cache/
+docs/HANDOFF.md

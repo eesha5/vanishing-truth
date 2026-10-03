@@ -92,8 +92,19 @@ This writes a JSON report, an overlay PNG (segments coloured by vanishing point)
 
 ## Data
 
-Images are **not** in this repository (about 1.5 GB). The prompt lists and per-set provenance
-files are tracked in `data/generated/`.
+The images are too large for the repository itself (about 1.3 GB). They are attached as zip
+files to the **data-v1** release on this repository's Releases page. Unzip them in the project
+root and they land in the right folders:
+
+| Zip | Contents |
+|---|---|
+| `data-real-commons.zip` | 358 Wikimedia Commons photos with `metadata.jsonl` (author, licence, EXIF) |
+| `data-generated-frontier.zip` | Gemini (181) and ChatGPT (51) images |
+| `data-generated-local.zip` | Stable Diffusion 1.5 and SDXL sets, each with its generation log |
+
+York Urban is not redistributed here; download it from the Elder Lab at York University and
+place it in `data/real/YorkUrbanDB`. The prompt lists and per-set provenance files are tracked
+in `data/generated/`.
 
 | Set | Source | Folder |
 |---|---|---|
