@@ -24,3 +24,7 @@ data/generated/*
 data/generated/*/*
 !data/generated/*/README.txt
 !data/generated/*/metadata.jsonl
+
+# Local tool settings
+.claude/
+.ruff_cache/
