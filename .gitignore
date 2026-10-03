@@ -25,7 +25,5 @@ data/generated/*/*
 !data/generated/*/README.txt
 !data/generated/*/metadata.jsonl
 
-# Local tool settings
-.claude/
+# Linter cache
 .ruff_cache/
-docs/HANDOFF.md
