@@ -5,6 +5,7 @@
 Writes to results/:
   architecture.png                 Figure 4.1, the pipeline flowchart
   app_workflow.png                 the demo app's workflow, upload to score (and _slide.png)
+  objective_flowchart.png          objective-wise flowchart for the methodology slides
   explain_example.png              Figure 4.2, one real photo and one generated image, lines coloured
                                    by vanishing point with the focal length each direction implies
   commons_montage_credited.png     Figure 5.3, admitted Commons photos at low, moderate and very high
@@ -137,6 +138,58 @@ def app_workflow(path=RES / "app_workflow.png", scale=1.0):
     plt.close(fig)
 
 
+def objective_flowchart(path=RES / "objective_flowchart.png"):
+    """One column per objective: what goes in, what is done, what came out."""
+    fig, ax = plt.subplots(figsize=(13, 6.45))
+    ax.set_xlim(0, 13)
+    ax.set_ylim(-0.25, 6.2)
+    ax.axis("off")
+    cols = [("Objective 1\nBuild and validate the measurement", "#2b4c7e", "#dbe7f5",
+             ["Synthetic scenes, York Urban,\nCommons photos with EXIF",
+              "LSD lines, then RANSAC vanishing\npoints (no right-angle prior)",
+              "Applicability rule\n(uses evidence only)",
+              "Residuals: concurrency, right angles,\nAtlanta focal spread, shadows"],
+             "VP error 0.3° on synthetic scenes;\nfocal 1.02 × EXIF on real photos"),
+            ("Objective 2\nCompare generators with real photos", "#b45f06", "#fce5cd",
+             ["Three prompt sets,\ncontent matched by construction",
+              "SD 1.5, SDXL run locally (logged);\nGemini, ChatGPT via their apps",
+              "Same pipeline on every image,\nreal and generated",
+              "Bootstrap CIs, Mann-Whitney,\nrobustness checks, classifiers"],
+             "AI focal agreement 2.5 to 3 × worse;\nclassifier AUC up to 0.92"),
+            ("Objective 3\nDemo app with a calibrated score", "#38761d", "#d9ead3",
+             ["Any uploaded image",
+              "Same per-image code:\n10 geometry measurements",
+              "Calibrated random forest\n(never sees pixels)",
+              "Score with reasons:\nlines, focal per direction, table"],
+             "Cross-validated AUC 0.80;\ntested on unseen generators")]
+    w, gap = 3.9, 0.45
+    for c, (head, ec, fc, steps, outcome) in enumerate(cols):
+        x = 0.15 + c * (w + gap)
+        cx = x + w / 2
+        ax.add_patch(FancyBboxPatch((x, 5.15), w, 0.9, boxstyle="round,pad=0.03,rounding_size=0.1",
+                                    fc=ec, ec=ec, lw=1.3))
+        ax.text(cx, 5.6, head, ha="center", va="center", fontsize=12, color="white", weight="bold")
+        y = 4.95
+        for k, st in enumerate(steps):
+            top = y - 0.12
+            ax.annotate("", (cx, top), (cx, y + 0.2 if k == 0 else y + 0.12),
+                        arrowprops={"arrowstyle": "-|>", "lw": 1.3, "color": "#333"})
+            ax.add_patch(FancyBboxPatch((x + 0.15, top - 0.78), w - 0.3, 0.78,
+                                        boxstyle="round,pad=0.03,rounding_size=0.1", fc=fc, ec=ec, lw=1.2))
+            ax.text(cx, top - 0.39, st, ha="center", va="center", fontsize=12.5)
+            y = top - 0.78 - 0.12
+        ax.annotate("", (cx, y - 0.12), (cx, y + 0.12), arrowprops={"arrowstyle": "-|>", "lw": 1.3, "color": "#333"})
+        ax.add_patch(FancyBboxPatch((x, y - 0.95), w, 0.83, boxstyle="round,pad=0.03,rounding_size=0.1",
+                                    fc="white", ec=ec, lw=2.0))
+        ax.text(cx, y - 0.535, outcome, ha="center", va="center", fontsize=12.5, weight="bold", color=ec)
+        if c < 2:     # the measurement built for objective 1 is reused by the next objective
+            ax.annotate("", (x + w + gap - 0.02, 5.6), (x + w + 0.02, 5.6),
+                        arrowprops={"arrowstyle": "-|>", "lw": 1.6, "color": "#555"})
+    fig.tight_layout(pad=0.3)
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 def explain_example():
     # published setting (no vertical-VP guard), as in the report's tables
     yu = {im.name: im.image for im in YorkUrban("data/real/YorkUrbanDB")}
@@ -196,6 +249,7 @@ if __name__ == "__main__":
     architecture()
     app_workflow()
     app_workflow(RES / "app_workflow_slide.png", scale=1.3)
+    objective_flowchart()
     explain_example()
     commons_montage()
     print("written: architecture.png, app_workflow.png, explain_example.png, commons_montage_credited.png/.txt")

@@ -1,126 +1,149 @@
-"""Build the CA-3 project presentation as a .pptx (16:9, 13.333 x 7.5 in).
+"""Build the CA-3 presentation on the college template (16:9, 13.333 x 7.5 in).
 
-Palette is content-informed: deep navy / teal for REAL photographs, amber for
-GENERATED images, used consistently wherever the two are contrasted.
+    python docs/report/build_ppt.py
 
-Writing rules, as for the report: plain sentences, technical terms kept, no em
-or en dashes (the build fails if one appears on a slide or in the notes).
+Starts from CA3_template.pptx (the institute's CA-3 template): its title slide is filled in,
+its instruction slides are replaced by content slides in the template's order, and every
+content slide keeps the template's look (white, Cambria, bold black titles, slide number
+bottom right).  Section order and slide counts follow the template's contents slide.
+
+Writing rules, as for the report: plain sentences, technical terms kept, no em or en dashes
+(the build fails if one appears on a slide or in the notes).
 """
 
+import copy
 from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
-from pptx.util import Emu, Inches, Pt
+from pptx.util import Inches, Pt
 
-ROOT = Path(__file__).resolve().parents[2]
-RES = ROOT / "results"
-OUT = Path(__file__).resolve().parent / "CA3_Presentation_Geometric_Consistency.pptx"
+HERE = Path(__file__).resolve().parent
+RES = HERE.parents[1] / "results"
+TEMPLATE = HERE / "CA3_template.pptx"
+OUT = HERE / "CA3_Presentation_Geometric_Consistency.pptx"
 
-NAVY = RGBColor(0x12, 0x26, 0x3A)
-TEAL = RGBColor(0x1C, 0x72, 0x93)
-AMBER = RGBColor(0xE8, 0xA3, 0x3D)
-LIGHT = RGBColor(0xF4, 0xF6, 0xF8)
-WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-GREY = RGBColor(0x5A, 0x66, 0x72)
-INK = RGBColor(0x1A, 0x1A, 0x1A)
-DARK_CARD = RGBColor(0x1B, 0x33, 0x4C)
-PALE = RGBColor(0xB9, 0xCD, 0xDA)
+INK = RGBColor(0x00, 0x00, 0x00)
+GREY = RGBColor(0x55, 0x55, 0x55)
+ACCENT = RGBColor(0xB0, 0x1E, 0x23)        # the red of the institute's logo, used sparingly
+LIGHT = RGBColor(0xF2, 0xF2, 0xF2)
+PLAN = RGBColor(0xF6, 0xD5, 0xD6)
+FONT = "Cambria"
+TABLE_STYLE = "{252108C0-F26C-423F-91A2-4CEDFFE9ED8A}"   # the template's own table style
+W = 13.333
 
-HEAD_FONT = "Cambria"
-BODY_FONT = "Calibri"
+STUDENTS = [("Aarushi Rudra", "24070127001"), ("Ankur Saxena", "24070127019"),
+            ("Arnav Vadhera", "240701270125"), ("Eesha Masand", "24070127043")]
+GUIDE = ["<Name of guide>", "<Designation>"]          # to be filled in by the team
 
-prs = Presentation()
-prs.slide_width = Inches(13.333)
-prs.slide_height = Inches(7.5)
-BLANK = prs.slide_layouts[6]
-W, H = 13.333, 7.5
+prs = Presentation(str(TEMPLATE))
+template_slides = list(prs.slides)
+SLIDE_NUMBER = next(sh._element for sh in template_slides[1].shapes
+                    if sh.is_placeholder and sh.placeholder_format.idx == 12)
+CONTENT_LAYOUT = template_slides[1].slide_layout
 
 
 # ------------------------------------------------------------------ helpers
-def slide(dark=False):
-    s = prs.slides.add_slide(BLANK)
-    bg = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = NAVY if dark else WHITE
-    bg.line.fill.background()
-    bg.shadow.inherit = False
+def run_style(r, size, bold=False, color=INK, italic=False):
+    r.font.size = Pt(size)
+    r.font.bold = bold
+    r.font.italic = italic
+    r.font.color.rgb = color
+    r.font.name = FONT
+
+
+def slide(title_text, sub=None):
+    """A content slide on the template's layout: title placeholder, slide number, no body.
+    sub: one line under the title (used to state each result's finding)."""
+    s = prs.slides.add_slide(CONTENT_LAYOUT)
+    for ph in list(s.placeholders):
+        if ph.placeholder_format.idx != 0:
+            ph._element.getparent().remove(ph._element)
+    t = s.shapes.title
+    t.left, t.top, t.width, t.height = Inches(0.92), Inches(0.2), Inches(11.5), Inches(0.95)
+    t.text_frame.text = ""
+    r = t.text_frame.paragraphs[0].add_run()
+    r.text = title_text
+    run_style(r, 34, bold=True)
+    s.shapes._spTree.append(copy.deepcopy(SLIDE_NUMBER))
+    if sub:
+        text(s, 0.92, 1.08, 11.5, 0.45, sub, size=19, bold=True, italic=True, color=ACCENT)
     return s
 
 
-def textbox(s, x, y, w, h, text, size=16, bold=False, color=INK, font=BODY_FONT,
-            align=PP_ALIGN.LEFT, italic=False, anchor=MSO_ANCHOR.TOP, space_after=6):
+def text(s, x, y, w, h, lines, size=16, bold=False, color=INK, italic=False, align=PP_ALIGN.LEFT,
+         anchor=MSO_ANCHOR.TOP, space_after=6):
     tb = s.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = tb.text_frame
     tf.word_wrap = True
-    tf.margin_left = tf.margin_right = 0
-    tf.margin_top = tf.margin_bottom = 0
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
     tf.vertical_anchor = anchor
-    lines = text if isinstance(text, list) else [text]
-    for i, line in enumerate(lines):
+    for i, line in enumerate(lines if isinstance(lines, list) else [lines]):
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.alignment = align
         p.space_after = Pt(space_after)
         r = p.add_run()
         r.text = line
-        r.font.size = Pt(size)
-        r.font.bold = bold
-        r.font.italic = italic
-        r.font.color.rgb = color
-        r.font.name = font
+        run_style(r, size, bold, color, italic)
     return tb
 
 
-def bullets(s, x, y, w, h, items, size=15, color=INK, space_after=10):
+def bullets(s, x, y, w, h, items, size=16, color=INK, space_after=8, marker="•"):
+    """items: str, or (str, bold) tuples."""
     tb = s.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = tb.text_frame
     tf.word_wrap = True
-    tf.margin_left = tf.margin_right = 0
-    tf.margin_top = tf.margin_bottom = 0
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
     for i, item in enumerate(items):
-        bold = False
-        txt = item
-        if isinstance(item, tuple):
-            txt, bold = item
+        txt, bold = item if isinstance(item, tuple) else (item, False)
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.space_after = Pt(space_after)
         r = p.add_run()
-        r.text = "•  " + txt
-        r.font.size = Pt(size)
-        r.font.bold = bold
-        r.font.color.rgb = color
-        r.font.name = BODY_FONT
+        r.text = f"{marker}  {txt}" if marker else txt
+        run_style(r, size, bold, color)
     return tb
 
 
-def title(s, text, sub=None, dark=False):
-    textbox(s, 0.7, 0.5, W - 1.4, 0.9, text, size=32, bold=True,
-            color=WHITE if dark else NAVY, font=HEAD_FONT)
-    if sub:
-        textbox(s, 0.7, 1.32, W - 1.4, 0.45, sub, size=14, italic=True,
-                color=AMBER if dark else GREY)
+def lbullets(s, x, y, w, h, items, size=16, space_after=10):
+    """items: (bold label, rest of the sentence), one paragraph each."""
+    tb = s.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+    for i, (label, rest) in enumerate(items):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(space_after)
+        r = p.add_run()
+        r.text = f"\u2022  {label} "
+        run_style(r, size, bold=True)
+        r = p.add_run()
+        r.text = rest
+        run_style(r, size)
+    return tb
 
 
-def card(s, x, y, w, h, fill=LIGHT, line=None):
-    sh = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
+def box(s, x, y, w, h, fill=LIGHT, line=None):
+    from pptx.enum.shapes import MSO_SHAPE
+    sh = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
     sh.fill.solid()
     sh.fill.fore_color.rgb = fill
-    if line:
+    if line is None:
+        sh.line.fill.background()
+    else:
         sh.line.color.rgb = line
         sh.line.width = Pt(1.25)
-    else:
-        sh.line.fill.background()
     sh.shadow.inherit = False
-    sh.adjustments[0] = 0.06
     return sh
 
 
-def stat(s, x, y, w, value, label, color=TEAL, vsize=40, label_color=GREY):
-    textbox(s, x, y, w, 0.75, value, size=vsize, bold=True, color=color,
-            font=HEAD_FONT, align=PP_ALIGN.CENTER)
-    textbox(s, x, y + 0.72, w, 0.7, label, size=11.5, color=label_color, align=PP_ALIGN.CENTER)
+def heading(s, x, y, w, label, color=ACCENT, size=15):
+    text(s, x, y, w, 0.4, label, size=size, bold=True, color=color)
+
+
+def stat(s, x, y, w, value, label, color=ACCENT):
+    text(s, x, y, w, 0.7, value, size=32, bold=True, color=color, align=PP_ALIGN.CENTER)
+    text(s, x, y + 0.7, w, 0.7, label, size=12.5, color=GREY, align=PP_ALIGN.CENTER)
 
 
 def picture(s, fname, x, y, w=None, h=None):
@@ -132,661 +155,446 @@ def picture(s, fname, x, y, w=None, h=None):
         kw["width"] = Inches(w)
     if h:
         kw["height"] = Inches(h)
-    s.shapes.add_picture(str(p), Inches(x), Inches(y), **kw)
+    return s.shapes.add_picture(str(p), Inches(x), Inches(y), **kw)
 
 
-def table(s, x, y, w, h, headers, rows, col_w=None, fsize=11):
-    shp = s.shapes.add_table(len(rows) + 1, len(headers), Inches(x), Inches(y),
-                             Inches(w), Inches(h))
-    t = shp.table
-    if col_w:
-        for i, cw in enumerate(col_w):
-            t.columns[i].width = Inches(cw)
-    for j, htxt in enumerate(headers):
-        c = t.cell(0, j)
-        c.text = ""
-        p = c.text_frame.paragraphs[0]
-        r = p.add_run()
-        r.text = htxt
-        r.font.size = Pt(fsize)
-        r.font.bold = True
-        r.font.color.rgb = WHITE
-        r.font.name = BODY_FONT
-        c.fill.solid()
-        c.fill.fore_color.rgb = NAVY
-        c.vertical_anchor = MSO_ANCHOR.MIDDLE
-    for i, row in enumerate(rows, start=1):
+def table(s, x, y, w, h, headers, rows, col_w, size=12, shade=None):
+    """Template-styled table. shade: {(row, col): RGBColor} for body cells (row 1 = first body row)."""
+    shp = s.shapes.add_table(len(rows) + 1, len(headers), Inches(x), Inches(y), Inches(w), Inches(h))
+    tbl = shp.table
+    tbl._tbl.tblPr.find("{http://schemas.openxmlformats.org/drawingml/2006/main}tableStyleId").text = TABLE_STYLE
+    for i, cw in enumerate(col_w):
+        tbl.columns[i].width = Inches(cw)
+    for i, row in enumerate([headers] + rows):
         for j, val in enumerate(row):
-            c = t.cell(i, j)
+            c = tbl.cell(i, j)
             c.text = ""
+            c.vertical_anchor = MSO_ANCHOR.MIDDLE
+            c.margin_left = c.margin_right = Inches(0.06)
             for k, ln in enumerate(str(val).splitlines() or [""]):
                 p = c.text_frame.paragraphs[0] if k == 0 else c.text_frame.add_paragraph()
+                p.alignment = PP_ALIGN.CENTER if i == 0 else PP_ALIGN.LEFT
                 r = p.add_run()
                 r.text = ln
-                r.font.size = Pt(fsize)
-                r.font.color.rgb = INK
-                r.font.name = BODY_FONT
-            c.fill.solid()
-            c.fill.fore_color.rgb = WHITE if i % 2 else LIGHT
-            c.vertical_anchor = MSO_ANCHOR.MIDDLE
-    return t
+                run_style(r, size, bold=(i == 0))
+            if shade and (i, j) in shade:
+                c.fill.solid()
+                c.fill.fore_color.rgb = shade[(i, j)]
+    return tbl
 
 
-def notes(s, text):
-    s.notes_slide.notes_text_frame.text = text
+def notes(s, txt):
+    s.notes_slide.notes_text_frame.text = txt
 
 
-# ================================================================== title
-s = slide(dark=True)
-textbox(s, 1.0, 2.0, W - 2.0, 0.5, "CA-3 VISION-BASED APPLICATION TASK", size=15,
-        bold=True, color=AMBER)
-textbox(s, 1.0, 2.6, W - 2.0, 1.5,
-        "Geometric Consistency Analysis for Detection of Synthetic Imagery",
-        size=36, bold=True, color=WHITE, font=HEAD_FONT)
-textbox(s, 1.0, 4.05, W - 2.0, 0.5,
-        "Vanishing-Point and Shadow-Based Cues Across Generator Generations",
-        size=17, italic=True, color=RGBColor(0xA9, 0xC4, 0xD4))
-textbox(s, 1.0, 5.1, W - 2.0, 1.2,
-        ["Team: <Name, PRN>   |   <Name, PRN>   |   <Name, PRN>",
-         "Course: Computer Vision   |   Department of <Department>, <Institute>",
-         "Academic Year 2026-27",
-         "Code and data: github.com/shmizi/perspective-can-t-lie"],
-        size=13, color=RGBColor(0xD6, 0xE2, 0xEA), space_after=4)
-notes(s, "Open with the one-line idea: a real photo is made by one camera, an AI image is not, and "
-         "that difference can be measured in degrees and pixels.")
-
-# ================================================================== problem
-s = slide()
-title(s, "Problem Statement")
-card(s, 0.7, 1.9, 7.4, 2.2, fill=LIGHT)
-textbox(s, 1.0, 2.15, 6.8, 1.8,
-        "Given a single image, decide whether its geometry fits ONE pinhole camera. Report any "
-        "mismatch as a residual in readable units, compare it with real photographs, and use the "
-        "result to compare image generators.", size=16, color=INK)
-bullets(s, 0.7, 4.4, 7.4, 2.4, [
-    ("Not “is this image fake?” but “which camera rule does it break, and by how much?”", True),
-    "Residuals in degrees and ratios, never an opaque score",
-    "Every comparison measured against real photographs",
-], size=14)
-card(s, 8.5, 1.9, 4.1, 4.9, fill=NAVY)
-textbox(s, 8.85, 2.2, 3.4, 0.5, "THE CLAIM UNDER TEST", size=12, bold=True, color=AMBER)
-textbox(s, 8.85, 2.8, 3.4, 3.7,
-        ["Parallel 3D lines meet at one vanishing point.",
-         "",
-         "Every part of the image implies the same focal length and lens centre.",
-         "",
-         "All shadows point away from one light source.",
-         "",
-         "No real camera can break these."],
-        size=13.5, color=WHITE, space_after=2)
-notes(s, "These rules come from projective geometry, not from habits of photographers, so every "
-         "real camera obeys them.")
-
-# ================================================================== motivation
-s = slide()
-title(s, "Motivation and Background")
-for i, (hd, body, col) in enumerate([
-    ("Forensic", "Pixel and frequency detectors get worse as generators improve. A broken geometry "
-                 "rule stays broken however good the texture is.", TEAL),
-    ("Scientific", "Which rules a model follows tells us what it has learned about 3D space.", NAVY),
-    ("Applied (Robotics)", "Visual servoing, navigation and structure from motion assume projective "
-                           "geometry. Synthetic training data must obey it.", AMBER),
-]):
-    x = 0.7 + i * 4.12
-    card(s, x, 2.0, 3.85, 2.9, fill=LIGHT)
-    dot = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(x + 0.3), Inches(2.3), Inches(0.42), Inches(0.42))
-    dot.fill.solid(); dot.fill.fore_color.rgb = col; dot.line.fill.background()
-    dot.shadow.inherit = False
-    textbox(s, x + 0.3, 2.9, 3.25, 0.4, hd, size=17, bold=True, color=NAVY, font=HEAD_FONT)
-    textbox(s, x + 0.3, 3.4, 3.25, 1.4, body, size=13, color=GREY)
-card(s, 0.7, 5.2, 11.93, 1.5, fill=NAVY)
-textbox(s, 1.1, 5.45, 11.1, 1.0,
-        "Background: a generator learns what photographs look like from data. Nothing inside it "
-        "stores an optical centre, a focal length or a principal point. So whether its images obey "
-        "camera geometry is an open question we can measure.",
-        size=14, color=WHITE)
-notes(s, "The robotics link is the syllabus tie-in: active perception and autonomous vehicles "
-         "depend on projective consistency.")
-
-# ================================================================== objectives
-s = slide()
-title(s, "Objectives")
-objs = [
-    ("O1", "Build and validate a pipeline for vanishing-point concurrency and single-camera coherence"),
-    ("O2", "Measure the normal range of every residual on a hand-picked benchmark and on ordinary "
-           "internet photos"),
-    ("O3", "Build generated image sets with matched content from four models, settings logged"),
-    ("O4", "Define an applicability rule that never looks at the answer, and validate it"),
-    ("O5", "Compare generators under matched content and camera settings; test standard classifiers"),
-    ("O6", "Implement the shadow rule as a linear program and validate it on synthetic scenes"),
-    ("O7", "Build an app that measures any image, explains the result and gives a calibrated score"),
-]
-for i, (tag, txt) in enumerate(objs):
-    y = 1.95 + i * 0.74
-    badge = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.7), Inches(y),
-                               Inches(0.78), Inches(0.54))
-    badge.fill.solid(); badge.fill.fore_color.rgb = TEAL if i % 2 == 0 else NAVY
-    badge.line.fill.background(); badge.shadow.inherit = False
-    badge.adjustments[0] = 0.2
-    tf = badge.text_frame
-    tf.margin_left = tf.margin_right = 0
-    p = tf.paragraphs[0]; p.alignment = PP_ALIGN.CENTER
-    r = p.add_run(); r.text = tag
-    r.font.size = Pt(15); r.font.bold = True; r.font.color.rgb = WHITE; r.font.name = HEAD_FONT
-    textbox(s, 1.65, y + 0.08, 11.0, 0.6, txt, size=14.5, color=INK)
-notes(s, "O4 is what separates this project from a naive implementation. O7 is the demo.")
-
-# ================================================================== literature
-s = slide()
-title(s, "Literature Review", "What is established, and by whom")
-table(s, 0.7, 2.0, 11.93, 3.6,
-      ["Work", "Contribution", "Relevance here"],
-      [["Sarkar et al., CVPR 2024",
-        "Classifiers on geometric features only (lines, perspective fields, shadows); AUC 0.88 to 0.94",
-        "Anchor paper: proves the cue exists, but not which rule fails"],
-       ["Kee, O'Brien and Farid, TOG 2013",
-        "Shadow consistency as a linear program over wedge constraints",
-        "Exact formulation used for our shadow rule"],
-       ["Criminisi, Reid and Zisserman, 2000",
-        "Single-view metrology from vanishing points",
-        "Mathematical basis of the camera test"],
-       ["Schindler and Dellaert, CVPR 2004",
-        "Atlanta world: one vertical, several horizontal directions",
-        "Why our main measure works on real streets"],
-       ["Denis, Elder and Estrada, ECCV 2008",
-        "York Urban Database: 102 calibrated images with true vanishing points",
-        "Our hand-picked real reference and validation set"]],
-      col_w=[2.7, 4.9, 4.33], fsize=11)
-textbox(s, 0.7, 5.85, 11.93, 0.9,
-        "Consensus: generated images break projective geometry. Open: which rule, by how much, and "
-        "measured against which real photographs.", size=14, italic=True, color=TEAL)
-notes(s, "Sarkar et al. is the paper we extend: from detection to diagnosis.")
-
-# ================================================================== gap
-s = slide(dark=True)
-title(s, "Identified Research Gap", dark=True)
-gaps = [
-    ("1", "Detection, not diagnosis", "Learned classifiers say a violation exists, not which "
-                                      "rule failed or by how much."),
-    ("2", "One real reference", "Studies compare against one hand-picked dataset. Whether the "
-                                "conclusion depends on that choice is unexamined."),
-    ("3", "Local vs global unmeasured", "No study separates getting the scene's directions wrong "
-                                        "from getting the camera wrong."),
-    ("4", "Applicability ignored", "The three-vanishing-point test does not apply to non-box-shaped "
-                                   "scenes, yet it is applied to them anyway."),
-]
-for i, (n, hd, body) in enumerate(gaps):
-    x = 0.7 + (i % 2) * 6.1
-    y = 2.05 + (i // 2) * 2.35
-    card(s, x, y, 5.8, 2.0, fill=DARK_CARD)
-    textbox(s, x + 0.35, y + 0.22, 0.6, 0.5, n, size=26, bold=True, color=AMBER, font=HEAD_FONT)
-    textbox(s, x + 1.0, y + 0.3, 4.5, 0.45, hd, size=16, bold=True, color=WHITE, font=HEAD_FONT)
-    textbox(s, x + 1.0, y + 0.85, 4.5, 1.0, body, size=12.5, color=PALE)
-textbox(s, 0.7, 6.85, 11.93, 0.4,
-        "This project addresses gaps 1 to 3, and solves gap 4 as part of the method.",
-        size=13, italic=True, color=AMBER)
-notes(s, "Gap 4 turned out to change the results the most.")
-
-# ================================================================== methodology
-s = slide()
-title(s, "Proposed Methodology", "Each level is one rule a pinhole camera cannot break")
-table(s, 0.7, 2.0, 11.93, 3.3,
-      ["Level", "Rule", "Residual", "Status"],
-      [["L2", "Lines parallel in 3D meet at one vanishing point", "Angle (deg)", "Built"],
-       ["L3", "Three directions at right angles fix one focal length and principal point",
-        "Deviation from 90 deg", "Built (secondary)"],
-       ["L3b", "Every horizontal direction gives the same focal length with the vertical",
-        "Spread of log focal length", "PRIMARY measure"],
-       ["L7", "All cast shadows agree with one light source", "LP violation (px)",
-        "Geometry validated"],
-       ["L1, L4 to L6, L8, L9", "Straightness, horizon, cross-ratio, conics, reflections",
-        "Various", "Future work"]],
-      col_w=[1.7, 5.2, 2.6, 2.43], fsize=11)
-card(s, 0.7, 5.6, 11.93, 1.2, fill=LIGHT)
-textbox(s, 1.0, 5.82, 11.3, 0.8,
-        "Key design decision: the vanishing-point finder is never told to look for right angles. "
-        "The camera test asks whether the directions are at right angles, so building that in "
-        "would make the test meaningless.",
-        size=14, bold=True, color=NAVY)
-notes(s, "If asked why L3b is primary: it works in Atlanta worlds (angled streets), where L3 does not.")
-
-# ================================================================== architecture
-s = slide()
-title(s, "System Architecture and Workflow")
-steps = [("Image", TEAL), ("LSD line\ndetection", TEAL), ("RANSAC VP\nestimation", TEAL),
-         ("Applicability\nrule", AMBER), ("Residuals\nL2 / L3 / L3b / L7", NAVY),
-         ("Compare with real\nphotographs", NAVY)]
-bx, by, bw, bh = 0.7, 2.3, 1.78, 1.25
-for i, (label, col) in enumerate(steps):
-    x = bx + i * (bw + 0.27)
-    sh = card(s, x, by, bw, bh, fill=col)
+# ================================================================== 1 title (the template's own slide)
+title_slide = template_slides[0]
+for sh in title_slide.shapes:
+    if not sh.has_text_frame:
+        continue
     tf = sh.text_frame
-    tf.word_wrap = True
-    tf.margin_left = tf.margin_right = Emu(45720)
-    for j, ln in enumerate(label.split("\n")):
-        p = tf.paragraphs[0] if j == 0 else tf.add_paragraph()
-        p.alignment = PP_ALIGN.CENTER
-        r = p.add_run(); r.text = ln
-        r.font.size = Pt(12.5); r.font.bold = True; r.font.color.rgb = WHITE
-        r.font.name = BODY_FONT
-    if i < len(steps) - 1:
-        ar = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(x + bw + 0.02),
-                                Inches(by + bh / 2 - 0.11), Inches(0.23), Inches(0.22))
-        ar.fill.solid(); ar.fill.fore_color.rgb = GREY; ar.line.fill.background()
-        ar.shadow.inherit = False
-textbox(s, 0.7, 3.72, 11.93, 0.55,
-        "Images that fail the rule are reported as a selection rate: how often one camera can even "
-        "be identified is itself a result about the generator.",
-        size=12.5, italic=True, color=AMBER)
-card(s, 0.7, 4.35, 5.8, 2.45, fill=LIGHT)
-textbox(s, 1.0, 4.55, 5.2, 0.4, "APPLICABILITY RULE (evidence only)", size=12, bold=True, color=NAVY)
-bullets(s, 1.0, 5.0, 5.2, 1.7, [
-    "3 line families, each ≥ 8% of the line length",
-    "each vanishing point pinned to < 1° (bootstrap)",
-    "each pair ≥ 10° apart and ≥ 5× its uncertainty",
-    "each family spread over ≥ 12% of the diagonal",
-], size=12.5, space_after=5)
-card(s, 6.83, 4.35, 5.8, 2.45, fill=NAVY)
-textbox(s, 7.13, 4.55, 5.2, 0.4, "WHY IT IS NOT CIRCULAR", size=12, bold=True, color=AMBER)
-bullets(s, 7.13, 5.0, 5.2, 1.7, [
-    "Right angles, focal length and the orthocentre are EXCLUDED",
-    "Admitted images: 90% of vanishing points within 5° of the truth (57% for rejected)",
-    "Unit test: injecting a camera violation does not change the decision",
-], size=12.5, color=WHITE, space_after=5)
-notes(s, "The non-circularity test is the answer if anyone asks whether we cherry-picked images.")
+    first = tf.text.strip()
+    if first == "Title of the Project":
+        sh.left, sh.top, sh.width, sh.height = Inches(0.9), Inches(2.45), Inches(11.53), Inches(1.25)
+        tf.word_wrap = True
+        tf.paragraphs[0].runs[0].text = "Geometric Consistency Analysis for Detection of Synthetic Imagery"
+        tf.paragraphs[0].runs[0].font.size = Pt(32)
+    elif first == "Name of Students (PRN)":
+        sh.left, sh.top, sh.width, sh.height = Inches(0.9), Inches(3.95), Inches(6.0), Inches(2.3)
+        tf.word_wrap = True
+        tf.paragraphs[0].alignment = PP_ALIGN.LEFT
+        tf.paragraphs[0].runs[0].font.size = Pt(20)
+        for name, prn in STUDENTS:
+            p = tf.add_paragraph()
+            p.alignment = PP_ALIGN.LEFT
+            r = p.add_run()
+            r.text = f"{name} ({prn})"
+            run_style(r, 17)
+    elif first == "Name and Designation of Guide":
+        sh.left, sh.top, sh.width, sh.height = Inches(7.4), Inches(3.95), Inches(5.2), Inches(1.6)
+        tf.word_wrap = True
+        tf.paragraphs[0].alignment = PP_ALIGN.LEFT
+        tf.paragraphs[0].runs[0].font.size = Pt(20)
+        for line in GUIDE:
+            p = tf.add_paragraph()
+            p.alignment = PP_ALIGN.LEFT
+            r = p.add_run()
+            r.text = line
+            run_style(r, 17, color=ACCENT)
+notes(title_slide, "Open with the one-line idea: a real photo is made by one camera, an AI image is not, "
+                   "and that difference can be measured in degrees and pixels. Code and data: "
+                   "github.com/shmizi/perspective-can-t-lie")
 
-# ================================================================== implementation
-s = slide()
-title(s, "Implementation")
-card(s, 0.7, 1.95, 3.7, 4.85, fill=NAVY)
-textbox(s, 1.0, 2.2, 3.1, 0.4, "ENVIRONMENT", size=12, bold=True, color=AMBER)
-bullets(s, 1.0, 2.7, 3.1, 4.0, [
-    "Python 3.14",
-    "OpenCV 4.13 (LSD, morphology)",
-    "NumPy, SciPy (LP, least squares)",
+# ================================================================== 2 contents
+s = slide("Content of Presentation")
+bullets(s, 1.0, 1.4, 11.3, 5.4, [
+    ("Introduction", True), ("Review of Literature", True), ("Research Gap", True),
+    ("Statement of the Problem", True), ("Objectives of the Study", True),
+    ("Methodology, Tools and Techniques", True), ("Results and Discussion", True),
+    ("Conclusion and Future Scope", True), ("Schedule of the Work", True), ("References", True),
+], size=20, space_after=7)
+
+# ================================================================== 3 introduction 1
+s = slide("Introduction: Background and Rationale")
+bullets(s, 0.92, 1.3, 11.5, 2.4, [
+    "A real photo is made by ONE camera: light passes through one optical centre onto a flat sensor "
+    "(the pinhole camera model).",
+    "So lines that are parallel in the world meet at one vanishing point, and every direction in the "
+    "image implies the same focal length and lens centre.",
+    "AI image generators have no camera inside them. They learn what photos look like, not how a "
+    "camera forms them. Do their images still obey the camera rules?",
+], size=16, space_after=7)
+picture(s, "explain_example.png", 2.57, 3.6, w=8.2)
+notes(s, "The figure is the whole project in one picture. Lines are coloured by direction. In the real "
+         "photo two directions give 649 and 713 px against a true focal length of 675 px. In the ChatGPT "
+         "image the directions disagree, so no single camera could have taken it.")
+
+# ================================================================== 4 introduction 2
+s = slide("Introduction: Significance and Current Trends")
+box(s, 0.92, 1.35, 5.6, 5.0, fill=RGBColor(0xFF, 0xFF, 0xFF), line=LIGHT)
+heading(s, 1.15, 1.5, 5.1, "SIGNIFICANCE OF THE STUDY")
+lbullets(s, 1.15, 2.0, 5.15, 4.3, [
+    ("Forensics.", "Pixel and frequency detectors weaken as generators improve. A broken geometry "
+                   "rule stays broken however good the texture is."),
+    ("Interpretable.", "Says which rule failed and by how much, in degrees and ratios, not just "
+                       "“fake”."),
+    ("Robotics.", "Navigation, visual servoing and structure from motion assume projective geometry. "
+                  "Synthetic training images must obey it."),
+], size=16, space_after=12)
+box(s, 6.85, 1.35, 5.6, 5.0)
+heading(s, 7.1, 1.5, 5.1, "CURRENT TRENDS")
+bullets(s, 7.1, 2.0, 5.1, 4.6, [
+    "Sarkar et al. (CVPR 2024): classifiers on geometric features alone detect generated images "
+    "(AUC 0.88 to 0.94).",
+    "Probing studies: generators store depth and surface normals locally, yet the global camera can "
+    "still be wrong.",
+    "New generation methods force vanishing points to agree, so perspective errors are a known "
+    "weakness.",
+    "2026: claims that the newest models have fixed geometry. Nobody had tested this. We test it on "
+    "Gemini and ChatGPT.",
+], size=15.5, space_after=10)
+
+# ================================================================== 5, 6 literature (template table)
+LIT_HEAD = ["Sr. No", "Author Name", "Paper Title", "Journal Name", "Methodology", "Remarks (Research Gaps)"]
+LIT_W = [0.62, 1.85, 2.95, 1.6, 2.45, 2.62]
+LIT = [
+    ["1", "A. Sarkar, H. Mai, A. Mahapatra, S. Lazebnik, D. A. Forsyth, A. Bhattad",
+     "Shadows Don't Lie and Lines Can't Bend! Generative Models don't know Projective Geometry...for now",
+     "CVPR, 2024", "Classifiers on line segments, perspective fields and object-shadow pairs",
+     "Detects that geometry is wrong (AUC 0.88 to 0.94) but not which rule fails or by how much"],
+    ["2", "E. Kee, J. F. O'Brien, H. Farid", "Exposing photo manipulation with inconsistent shadows",
+     "ACM Trans. on Graphics, 2013", "Shadow-object wedge constraints solved as a linear program",
+     "Shadow-object pairs marked by hand; not applied to AI images at scale"],
+    ["3", "H. Farid", "Perspective (in)consistency of paint by text", "arXiv, 2022",
+     "Manual vanishing-point analysis of early text-to-image outputs",
+     "Small hand-checked sample; no statistics against many real photos"],
+    ["4", "A. Criminisi, I. Reid, A. Zisserman", "Single view metrology", "IJCV, 2000",
+     "Measurement from vanishing points and the vanishing line",
+     "Assumes a real camera; the basis of our test, not a detector"],
+    ["5", "J. M. Coughlan, A. L. Yuille", "Manhattan world: compass direction from a single image by "
+     "Bayesian inference", "ICCV, 1999", "Bayesian estimate of three directions at right angles",
+     "The right-angle assumption fails on angled streets"],
+    ["6", "G. Schindler, F. Dellaert", "Atlanta world: an EM framework for simultaneous low-level edge "
+     "grouping and camera calibration", "CVPR, 2004", "One vertical and several horizontal directions, "
+     "fitted by EM", "Used for calibration; never used to test whether an image has one camera"],
+    ["7", "P. Denis, J. H. Elder, F. J. Estrada", "Efficient edge-based methods for estimating Manhattan "
+     "frames in urban imagery", "ECCV, 2008", "York Urban Database: 102 calibrated photos with true "
+     "vanishing points", "One camera, hand-picked scenes; a single reference can bias conclusions"],
+    ["8", "M. El Banani et al.", "Probing the 3D awareness of visual foundation models", "CVPR, 2024",
+     "Linear probes read depth and surface normals from model features",
+     "Local 3D only; global camera consistency untested"],
+]
+for part, rows in enumerate([LIT[:4], LIT[4:]]):
+    s = slide(f"Review of Literature ({part + 1}/2)")
+    table(s, 0.62, 1.3, sum(LIT_W), 5.0 if part == 0 else 4.6, LIT_HEAD, rows, LIT_W, size=12)
+    if part == 1:
+        text(s, 0.62, 6.15, 12.1, 0.6,
+             "Summary: generated images break projective geometry. Open: which rule, by how much, and "
+             "measured against which real photographs.", size=15, italic=True, color=ACCENT)
+notes(s, "Sarkar et al. is the paper we extend: from detection to diagnosis. Full list of 26 references "
+         "in the report.")
+
+# ================================================================== 7 research gap
+s = slide("Research Gap")
+GAPS = [("1", "Detection, not diagnosis", "Learned classifiers say a violation exists, not which rule "
+                                          "failed or by how much."),
+        ("2", "One real reference", "Studies compare against one hand-picked dataset. Whether the "
+                                    "conclusion depends on that choice is unexamined."),
+        ("3", "Orientation vs camera never separated", "No study separates getting the scene's "
+                                                       "directions wrong from getting the camera wrong."),
+        ("4", "Applicability ignored", "The three-vanishing-point test does not apply to scenes that "
+                                       "are not box-shaped, yet it is applied to them anyway.")]
+for i, (n, hd, body) in enumerate(GAPS):
+    x, y = 0.92 + (i % 2) * 5.85, 1.4 + (i // 2) * 2.45
+    box(s, x, y, 5.6, 2.2)
+    text(s, x + 0.25, y + 0.2, 0.6, 0.6, n, size=30, bold=True, color=ACCENT)
+    text(s, x + 0.9, y + 0.27, 4.5, 0.5, hd, size=17, bold=True)
+    text(s, x + 0.9, y + 0.85, 4.5, 1.25, body, size=15, color=GREY)
+text(s, 0.92, 6.4, 11.5, 0.45, "This project addresses gaps 1 to 3, and solves gap 4 as part of the method.",
+     size=15, italic=True, color=ACCENT)
+notes(s, "Gap 4 turned out to change the results the most: see Results 2.")
+
+# ================================================================== 8 problem statement
+s = slide("Statement of the Problem")
+box(s, 0.92, 1.4, 11.5, 1.55, line=ACCENT, fill=RGBColor(0xFF, 0xFF, 0xFF))
+text(s, 1.2, 1.55, 10.95, 1.3,
+     "Given a single image, decide whether its geometry fits ONE pinhole camera. Report any mismatch as a "
+     "readable residual tied to a specific geometric rule, compare it with real photographs, and use the "
+     "result to compare image generators.", size=18, anchor=MSO_ANCHOR.MIDDLE)
+heading(s, 0.92, 3.25, 11.5, "RESEARCH QUESTIONS")
+bullets(s, 0.92, 3.75, 11.5, 3.0, [
+    "Q1. Do images from current generators obey a single pinhole camera, compared with real photos of "
+    "similar scenes?",
+    "Q2. If not, what fails: the right angles between directions, or the focal length and lens centre "
+    "agreeing across the image?",
+    "Q3. Does the problem shrink as models get bigger, and do Gemini and ChatGPT still show it?",
+    "Q4. Can simple, readable residuals compete with learned classifiers at telling real from generated?",
+], size=18, space_after=12, marker="")
+
+# ================================================================== 9 objectives
+s = slide("Objectives of the Study")
+OBJ = ["To build and validate a measurement pipeline that tests whether an image's lines are consistent "
+       "with a single pinhole camera, using synthetic scenes and real photographs with known cameras.",
+       "To compare images from four generators (Stable Diffusion 1.5, SDXL, Gemini and ChatGPT) with two "
+       "sets of real photographs under matched content, and find which camera rule they break and by how "
+       "much.",
+       "To build an interactive application that measures any uploaded image, explains the result and "
+       "gives a calibrated likelihood that the image is AI-generated."]
+for i, o in enumerate(OBJ):
+    y = 1.45 + i * 1.75
+    text(s, 0.92, y, 0.8, 0.8, str(i + 1), size=40, bold=True, color=ACCENT)
+    text(s, 1.85, y + 0.12, 10.55, 1.5, o, size=19)
+notes(s, "The report lists seven detailed objectives; they group into these three. 1: O1, O2, O4, O6. "
+         "2: O3, O5. 3: O7.")
+
+# ================================================================== 10 to 13 methodology
+s = slide("Methodology: Objective-wise Flowchart")
+picture(s, "objective_flowchart.png", 0.92, 1.2, w=11.5)
+notes(s, "Each column is one objective, read top to bottom. The pipeline built for objective 1 is reused "
+         "unchanged by objectives 2 and 3, which is why the app and the report always agree.")
+
+s = slide("Methodology: Techniques")
+table(s, 0.92, 1.3, 11.5, 2.15, ["Level", "Camera rule", "Residual (units)", "Role"],
+      [["L2", "Lines parallel in 3D meet at one vanishing point", "Angle (deg)", "Built, validated"],
+       ["L3", "Three directions at right angles give one focal length and lens centre",
+        "Deviation from 90 deg", "Secondary"],
+       ["L3b (Atlanta)", "Every horizontal direction gives the SAME focal length with the vertical",
+        "Spread of log focal length", "PRIMARY measure"],
+       ["L7", "All cast shadows agree with one light source", "LP violation (px)", "Synthetic validation"]],
+      [1.7, 5.6, 2.4, 1.8], size=13)
+box(s, 0.92, 3.7, 5.6, 3.05)
+heading(s, 1.15, 3.85, 5.2, "FOCAL LENGTH FROM TWO DIRECTIONS")
+text(s, 1.15, 4.3, 5.2, 0.5, "f² = −(v₁ − p) · (v₂ − p)",
+     size=22, bold=True)
+text(s, 1.15, 4.95, 5.2, 1.75,
+     ["v₁, v₂: vanishing points of two perpendicular directions; p: the image centre.",
+      "In a real photo every (vertical, horizontal) pair gives the same focal length. A pair with "
+      "f² ≤ 0 is one no camera could produce."],
+     size=15, space_after=8)
+box(s, 6.82, 3.7, 5.6, 3.05)
+heading(s, 7.05, 3.85, 5.2, "APPLICABILITY RULE (EVIDENCE ONLY)")
+bullets(s, 7.05, 4.35, 5.2, 2.35, [
+    "3 line families, each at least 8% of the line length",
+    "each vanishing point pinned to under 1 deg (bootstrap)",
+    "pairs at least 10 deg apart, and 5 times their uncertainty",
+    "never uses the residual, so it cannot bias the test",
+    "LSD lines, sequential RANSAC, NO right-angle prior",
+], size=15, space_after=6)
+notes(s, "Key design decision: the vanishing-point finder is never told to look for right angles. The "
+         "camera test asks whether the directions are at right angles, so building that in would make "
+         "the test meaningless.")
+
+s = slide("Methodology: Data Acquisition and Tools")
+table(s, 0.92, 1.3, 7.55, 3.9, ["Dataset", "Images", "Role"],
+      [["York Urban", "102", "Hand-picked real photos with true vanishing points"],
+       ["Wikimedia Commons", "358", "Ordinary real photos, 135 camera models, EXIF focal length"],
+       ["Stable Diffusion 1.5", "450", "Older open model, run on our GPU, settings logged"],
+       ["SDXL", "650", "Newer open model, run on our GPU, settings logged"],
+       ["Gemini (“nano banana”)", "181", "Closed frontier model, September 2026"],
+       ["ChatGPT image model", "51", "Closed frontier model, September 2026"],
+       ["Synthetic scenes", "on demand", "Known cameras and injected violations, for testing"]],
+      [2.45, 1.15, 3.95], size=12.5)
+text(s, 0.92, 5.45, 7.55, 1.3,
+     "Three prompt sets with content matched by construction. Every comparison stays within one prompt "
+     "set, so a model is never compared on different scenes.", size=14, italic=True, color=GREY)
+box(s, 8.75, 1.3, 3.67, 5.45)
+heading(s, 8.95, 1.45, 3.3, "TOOLS")
+bullets(s, 8.95, 1.95, 3.3, 2.6, [
+    "Python 3.14, OpenCV 4.13 (LSD)",
+    "NumPy, SciPy (least squares, LP)",
     "scikit-learn, statsmodels",
-    "PyTorch 2.14 + CUDA 13",
-    "diffusers 0.40",
+    "PyTorch 2.14, diffusers 0.40",
     "Streamlit 1.58 (demo app)",
-    "RTX 5060 Laptop, 8 GB VRAM",
-], size=12.5, color=WHITE, space_after=6)
-card(s, 4.65, 1.95, 3.7, 4.85, fill=LIGHT)
-textbox(s, 4.95, 2.2, 3.1, 0.4, "PACKAGE  projgeo", size=12, bold=True, color=NAVY)
-bullets(s, 4.95, 2.7, 3.1, 4.0, [
-    "lines: LSD detection",
-    "vp: RANSAC + refinement",
-    "selection: applicability rule",
-    "camera: focal length, Atlanta test",
-    "explain: one image, end to end",
-    "stats: confidence intervals",
-    "appmodel: the app's score",
-    "shadows, synth: L7 and tests",
-], size=12.5, space_after=6)
-card(s, 8.6, 1.95, 4.03, 4.85, fill=LIGHT)
-textbox(s, 8.9, 2.2, 3.4, 0.4, "VALIDATION (25 TESTS)", size=12, bold=True, color=NAVY)
-bullets(s, 8.9, 2.7, 3.4, 4.0, [
-    "Synthetic scenes with known cameras",
-    "4 violation injectors: concurrency, VP shift, drift, two-camera split",
-    "Each residual must react to its OWN rule and stay flat for the others",
-    "Residuals must rise steadily with the injected violation",
-], size=12.5, space_after=7)
-notes(s, "explain.py is the single implementation of the measurement: the report's numbers, the "
-         "robustness checks and the app all call it, so they cannot disagree.")
+    "RTX 5060 Laptop GPU, 8 GB",
+], size=14, space_after=5)
+heading(s, 8.95, 4.45, 3.3, "STATISTICS")
+bullets(s, 8.95, 4.95, 3.3, 1.65, [
+    "Bootstrap 95% CI (2000 resamples)",
+    "Wilson intervals, Mann-Whitney",
+    "5-fold cross-validation",
+], size=14, space_after=5)
 
-# ================================================================== data
-s = slide()
-title(s, "Data Acquisition", "Matched content by construction; every setting logged")
-table(s, 0.7, 1.95, 11.93, 3.3,
-      ["Dataset", "Size", "Role"],
-      [["York Urban", "102 images", "Hand-picked real reference with true vanishing points"],
-       ["Wikimedia Commons", "358 images, 135 camera models",
-        "Ordinary real photos, many cameras, EXIF focal lengths"],
-       ["Stable Diffusion 1.5", "450 images", "Older open model, run on our GPU"],
-       ["SDXL", "650 images", "Newer open model, plus 1:1 and 16:9 variants"],
-       ["Gemini (“nano banana”)", "181 images", "Closed frontier model, September 2026"],
-       ["ChatGPT image model", "51 images", "Closed frontier model, September 2026"],
-       ["Synthetic scenes", "on demand", "Ground truth for testing"]],
-      col_w=[2.9, 3.0, 6.03], fsize=11.5)
-card(s, 0.7, 5.45, 11.93, 1.5, fill=LIGHT)
-textbox(s, 1.0, 5.62, 11.3, 1.2,
-        "Three prompt sets. Set 1: building fronts, streets, corridors (also used for Gemini and "
-        "ChatGPT). Set 2: corners, to guarantee three directions; too few lines, so selection fell "
-        "from 40% to 30%. Set 3 adds repeating straight features (tiles, shelving, window grids) and "
-        "reaches 48%. Every comparison uses a single prompt set.",
-        size=13, color=INK)
-notes(s, "Comparing a model on one prompt set against another model on a different set would mix "
-         "up the model with the scene type, so we never do it.")
+s = slide("Methodology: Demonstration App Workflow")
+picture(s, "app_workflow_slide.png", 0.67, 1.2, w=12.0)
+text(s, 0.92, 6.3, 11.5, 0.5,
+     "Streamlit app on the same per-image code as the report. The model sees only the ten measurements; "
+     "the built-in examples were held out of training.", size=14, italic=True, color=GREY)
+notes(s, "The diamond is the applicability rule: an image without lines in three directions gets no score "
+         "instead of a guess. Calibration turns the vote into a probability, re-based so that real and AI "
+         "were equally likely before looking.")
 
-# ================================================================== results 1
-s = slide()
-title(s, "Results 1: The Tool Is Trustworthy", "Validation before any comparison")
-stat(s, 0.7, 2.1, 2.7, "0.3°", "vanishing-point error on synthetic scenes with known cameras")
-stat(s, 3.6, 2.1, 2.7, "< 1%", "focal-length error on synthetic scenes")
-stat(s, 6.5, 2.1, 2.7, "81 / 94%", "of York Urban's true vanishing points found within 2° / 5°")
-stat(s, 9.4, 2.1, 2.7, "1.02", "median ratio of fitted to TRUE focal length (IQR 0.99 to 1.05)",
-     color=AMBER)
-picture(s, "commons_focal_validation.png", 1.1, 3.9, h=3.0)
-card(s, 5.6, 3.9, 7.0, 3.0, fill=LIGHT)
-textbox(s, 5.9, 4.15, 6.4, 2.5,
-        ["The pipeline finds the real camera in real photos.", "",
-         "Left: fitted focal length against EXIF focal length for photos from 135 camera models. "
-         "Dashed lines mark a ±20% band.", "",
-         "We need this before trusting anything the tool says about AI images."],
-        size=13.5, color=INK, space_after=4)
-notes(s, "Without this slide every later number would be uninterpretable.")
+# ================================================================== 14 to 17 results
+s = slide("Results and Discussion (1/4)", "The measurement recovers real cameras")
+for i, (v, lab) in enumerate([("0.3°", "vanishing-point error, synthetic scenes"),
+                              ("< 1%", "focal-length error, synthetic scenes"),
+                              ("81 / 94%", "York Urban true vanishing points found within 2° / 5°"),
+                              ("1.02", "fitted / EXIF focal length on real photos (IQR 0.99 to 1.05)")]):
+    stat(s, 0.92 + i * 2.9, 1.6, 2.75, v, lab)
+picture(s, "commons_focal_validation.png", 1.3, 3.25, h=3.55)
+box(s, 5.6, 3.25, 6.82, 3.55)
+bullets(s, 5.85, 3.45, 6.35, 3.25, [
+    ("The pipeline recovers the real camera from real photos.", True),
+    "Left: fitted focal length against the EXIF focal length for photos from 135 camera models. Dashed "
+    "lines: a 20% band.",
+    "This has to hold before anything the tool says about AI images can be trusted.",
+    ("Objective 1 achieved.", True),
+], size=15, space_after=10)
 
-# ================================================================== results 2 (the twist)
-s = slide(dark=True)
-title(s, "Results 2: The Real Reference Decides the Verdict", dark=True)
-card(s, 0.7, 2.1, 5.8, 2.0, fill=DARK_CARD)
-textbox(s, 1.0, 2.35, 5.2, 1.6,
-        ["Measured naively, ORDINARY real photos score 12.2° on the right-angle test: worse "
-         "than SD 1.5 and far worse than SDXL.", "",
-         "Taken at face value, AI images would look more camera-consistent than photos."],
-        size=13.5, color=WHITE, space_after=4)
-card(s, 6.83, 2.1, 5.8, 2.0, fill=DARK_CARD)
-textbox(s, 7.13, 2.35, 5.2, 1.6,
-        ["Why: angled streets and facades have three clear directions that are simply NOT at "
-         "right angles.", "",
-         "These are Atlanta worlds. The right-angle test does not apply to them. The fault is in "
-         "the test, not the photos."],
-        size=13.5, color=WHITE, space_after=4)
-for i, (val, lab, col) in enumerate([
-        ("12.2°", "ordinary real photos, no applicability rule", AMBER),
-        ("2.82°", "same photos, after the rule", TEAL),
-        ("0.15", "log-focal spread, Atlanta measure", WHITE)]):
-    stat(s, 1.5 + i * 3.6, 4.5, 3.0, val, lab, color=col, vsize=36, label_color=PALE)
-textbox(s, 0.7, 6.5, 11.93, 0.5,
-        "So the main measure became Atlanta focal consistency, which works on both kinds of scene.",
-        size=13.5, italic=True, color=AMBER)
-notes(s, "This is the method lesson of the project. No filtering on evidence removes the tail: a "
-         "stricter threshold makes it worse, and 98% of those photos are uncropped.")
+s = slide("Results and Discussion (2/4)", "AI images do not have one camera")
+picture(s, "atlanta_dots_slide.png", 0.6, 1.7, w=7.4)
+text(s, 0.6, 5.45, 7.4, 1.0,
+     "Line-rich prompt set. Dots: medians; lines: 95% intervals; shaded band: range of the real-photo "
+     "intervals.", size=12, italic=True, color=GREY)
+box(s, 8.25, 1.7, 4.17, 5.1)
+bullets(s, 8.45, 1.85, 3.8, 4.9, [
+    ("Real photos: directions agree on one focal length within about 15% (0.14, 0.15).", True),
+    ("SD 1.5 and SDXL: 35 to 60% disagreement (0.47, 0.36), p ≈ 3×10⁻⁵.", True),
+    "Two very different real sets agree, so the verdict does not depend on the reference.",
+    "Holds after both robustness checks (p ≤ 0.008).",
+    "A naive right-angle test made real street photos look WORSE than AI (12.2°): angled streets "
+    "are not at right angles. The applicability rule fixes this.",
+], size=13.5, space_after=7)
+notes(s, "This is the slide to defend. Bootstrap intervals, 2000 resamples; Wilson intervals for "
+         "proportions; Mann-Whitney test. SD 1.5 to SDXL improves orientation (2.93 to 1.94 deg) but not "
+         "camera coherence (p = 0.55).")
 
-# ================================================================== results 3 headline
-s = slide()
-title(s, "Results 3: Primary Finding", "Atlanta focal consistency on images that pass the applicability rule")
-table(s, 0.7, 1.95, 11.93, 2.3,
-      ["Quantity", "York Urban (real)", "Commons (real)", "SD 1.5", "SDXL"],
-      [["Images admitted by the rule", "72", "121", "92", "112"],
-       ["Usable for log-focal spread", "65", "91", "53", "65"],
-       ["Log-focal spread, median [95% CI]", "0.142 [0.106, 0.221]", "0.152 [0.093, 0.220]",
-        "0.465 [0.324, 0.709]", "0.355 [0.272, 0.529]"],
-       ["Images with an impossible pair", "28%", "44%", "68%", "58%"]],
-      col_w=[3.45, 2.12, 2.12, 2.12, 2.12], fsize=11)
-card(s, 0.7, 4.5, 11.93, 1.15, fill=NAVY)
-textbox(s, 1.0, 4.68, 11.3, 0.85,
-        "In a real photo the horizontal directions agree on ONE focal length to within about 15%. "
-        "In AI images they disagree by 35 to 60%.  (p ≈ 3×10⁻⁵ against either "
-        "real set)", size=16, bold=True, color=WHITE)
-bullets(s, 0.7, 5.9, 11.93, 1.2, [
-    "The two real sets agree with each other, so the result does not depend on which real photos "
-    "are used.",
-    "Both generators sit clearly above both real sets, with non-overlapping intervals.",
-], size=13.5, space_after=6)
-notes(s, "This is the slide to defend. Intervals are bootstrap (2000 resamples); proportions use "
-         "Wilson intervals; the test is Mann-Whitney. Line-rich prompt set.")
+s = slide("Results and Discussion (3/4)", "The newest models, Gemini and ChatGPT, still fail")
+picture(s, "frontier_dots_slide.png", 0.6, 1.65, h=4.55)
+box(s, 8.05, 1.65, 4.37, 4.55)
+heading(s, 8.25, 1.8, 4.0, "GEMINI AND CHATGPT")
+bullets(s, 8.25, 2.3, 4.0, 3.85, [
+    ("Both still fail: p ≈ 0.015 against both real sets.", True),
+    "Not yet shown to beat SD 1.5 or SDXL (p = 0.14 to 0.26).",
+    "Small samples: 31 and 29 usable images.",
+    "ChatGPT's impossible-pair rate (39%) looks real; its focal spread does not.",
+], size=14, space_after=9)
+box(s, 0.6, 6.35, 11.82, 0.5, fill=ACCENT)
+text(s, 0.8, 6.35, 11.4, 0.5, "The 2026 claim that the geometric giveaway has disappeared does not hold "
+                              "on this measure.", size=15, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
+     anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "Gemini and ChatGPT images were made in September 2026 from the first prompt set, so they are "
+         "compared with the SD and SDXL images from that same set.")
 
-# ================================================================== results 4 figure + scaling
-s = slide()
-title(s, "Results 4: Distributions and Scaling")
-picture(s, "atlanta_dots_slide.png", 0.7, 1.95, w=7.6)
-textbox(s, 0.7, 5.85, 7.6, 0.7,
-        "Dots: medians. Lines: 95% intervals. Grey band: the range of the real-photo intervals. "
-        "Left: focal disagreement. Right: share of images with a pair no camera could produce.",
-        size=11.5, italic=True, color=GREY)
-card(s, 8.6, 2.0, 4.03, 4.5, fill=LIGHT)
-textbox(s, 8.9, 2.25, 3.4, 0.5, "SD 1.5 → SDXL", size=15, bold=True, color=NAVY, font=HEAD_FONT)
-textbox(s, 8.9, 2.85, 3.4, 3.4,
-        ["Same prompts, matched field of view and line density, 250 images per model.", "",
-         "Orientation: 2.93° → 1.94°   (p = 0.0002, improves)", "",
-         "Focal coherence: 0.465 → 0.355   (p = 0.55, UNCHANGED)", "",
-         "A bigger model gets the directions right. It does not learn to commit to one camera."],
-        size=12.5, color=INK, space_after=3)
-notes(s, "Say clearly that the focal result is a null, not a reversal. An earlier claim that "
-         "scaling made it worse was withdrawn after we found it used an invalid statistic.")
-
-# ================================================================== results 5 robustness
-s = slide()
-title(s, "Results 5: Is It an Artefact?", "Two checks, both suggested by looking closely at single images")
-card(s, 0.7, 1.95, 5.8, 2.45, fill=LIGHT)
-textbox(s, 1.0, 2.15, 5.2, 0.4, "CHECK 1: THE WRONG “VERTICAL”", size=12, bold=True, color=NAVY)
-textbox(s, 1.0, 2.6, 5.2, 1.7,
-        ["A corridor's far end, near the image centre, can be picked as the vertical vanishing "
-         "point by mistake.", "",
-         "Require the vertical point to be at least one image height away: 0 to 5% of images "
-         "change, every result holds."],
-        size=12.5, color=INK, space_after=2)
-card(s, 6.83, 1.95, 5.8, 2.45, fill=NAVY)
-textbox(s, 7.13, 2.15, 5.2, 0.4, "CHECK 2: LEVEL CAMERAS", size=12, bold=True, color=AMBER)
-textbox(s, 7.13, 2.6, 5.2, 1.7,
-        ["A level camera makes focal length noisy, and AI images are level far more often "
-         "(76 to 80% vs 31 to 51% of real photos).", "",
-         "Keep only clearly tilted cameras: AI is still 2 to 3 times worse."],
-        size=12.5, color=WHITE, space_after=2)
-table(s, 0.7, 4.65, 11.93, 1.6,
-      ["Condition", "York Urban", "Commons", "SD 1.5", "SDXL", "Largest p vs real"],
-      [["As published", "0.142", "0.152", "0.465", "0.355", "0.0001"],
-       ["Vertical point ≥ 1 image height from centre", "0.142", "0.149", "0.465", "0.355", "0.0001"],
-       ["Clearly tilted cameras only", "0.135", "0.135", "0.423", "0.285", "0.008"]],
-      col_w=[4.4, 1.45, 1.45, 1.45, 1.45, 1.73], fsize=11)
-textbox(s, 0.7, 6.5, 11.93, 0.5,
-        "Verdict: the main result survives both checks.", size=14, italic=True, bold=True, color=TEAL)
-notes(s, "Both checks use only the position of the vertical vanishing point, never the focal length, "
-         "so they cannot bias the test. Numbers are median log-focal spread, line-rich prompts.")
-
-# ================================================================== results 6 classifiers
-s = slide()
-title(s, "Results 6: Detection from Residuals Alone", "Syllabus Unit 3 classifiers on the residuals, never on pixels")
-picture(s, "classifier_roc.png", 0.7, 2.05, w=6.4)
-table(s, 7.5, 2.0, 5.13, 2.5,
-      ["Task (best AUC)", "All", "Admitted"],
-      [["York Urban vs SDXL", "0.875", "0.903"],
-       ["York Urban vs SD 1.5", "0.919", "0.926"],
-       ["Commons vs SDXL", "0.807", "0.808"],
-       ["Field of view matched", "0.814", "0.863"]],
-      col_w=[2.9, 1.1, 1.13], fsize=12)
-card(s, 7.5, 4.75, 5.13, 2.1, fill=LIGHT)
-textbox(s, 7.8, 4.92, 4.5, 1.8,
-        ["Sarkar et al. report 0.88 to 0.94 with LEARNED features. Readable residuals reach the "
-         "same band.", "",
-         "Top feature: the orthocentre offset, i.e. where the lens centre sits. Invalid focal "
-         "features were removed; AUC moved by at most 0.04."],
-        size=12, color=INK, space_after=3)
-notes(s, "Six algorithms: logistic regression, decision tree, SVM, random forest, naive Bayes, kNN. "
-         "Five-fold stratified cross-validation. The random forest was best in every task.")
-
-# ================================================================== results 7 frontier
-s = slide()
-title(s, "Results 7: The Newest Models", "Gemini and ChatGPT on the same prompts as SD 1.5 and SDXL")
-picture(s, "frontier_dots_slide.png", 0.7, 1.9, h=4.05)
-card(s, 6.85, 1.95, 5.78, 4.0, fill=LIGHT)
-textbox(s, 7.15, 2.15, 5.2, 0.4, "WHAT IT SHOWS", size=12, bold=True, color=NAVY)
-bullets(s, 7.15, 2.6, 5.2, 3.3, [
-    ("Both still fail: p ≈ 0.015 against both real sets", True),
-    "Not yet shown to be better than SD 1.5 or SDXL (p = 0.14 to 0.26)",
-    "Small samples: 31 and 29 usable images",
-    "ChatGPT's impossible-pair rate (39%) looks real; its focal spread does not",
-    "Hardest to detect: ChatGPT AUC 0.59, Gemini 0.76 (SD models 0.81 to 0.84)",
-], size=14, space_after=10)
-card(s, 0.7, 6.1, 11.93, 0.95, fill=NAVY)
-textbox(s, 1.0, 6.27, 11.3, 0.65,
-        "The 2026 claim that the geometric giveaway has disappeared does not hold on this measure.",
-        size=15, bold=True, color=WHITE)
-notes(s, "Gemini (nano banana, via Antigravity) and ChatGPT images were made in September 2026 from "
-         "the first prompt set, so they are compared with the SD and SDXL images from that same set. "
-         "Next step: 250 line-rich prompts per model at full resolution. The detection AUCs in the "
-         "last bullet are the demo app's cross-validated scores for real photos against each generator.")
-
-# ================================================================== app workflow
-s = slide()
-title(s, "How the App Decides", "Geometry in, a calibrated score out. The model never sees the pixels.")
-picture(s, "app_workflow_slide.png", 0.7, 1.85, w=11.93)
-textbox(s, 0.7, 6.9, 11.93, 0.4,
-        "Same measurement code as the report. The built-in demo examples were held out of training.",
-        size=13, italic=True, color=GREY)
-notes(s, "Walk through it left to right, then right to left. The diamond is the applicability rule: "
-         "an image without lines in three directions gets no score instead of a guess. The random "
-         "forest only sees the ten numbers, so a high score always means the geometry is off, never "
-         "texture or a watermark. Calibration turns the vote into a probability, re-based so that real "
-         "and AI were equally likely before looking.")
-
-# ================================================================== app trust
-s = slide()
-title(s, "How Far to Trust the Score", "Cross-validated on 191 real photos and 434 AI images")
-stat(s, 0.7, 1.95, 2.6, "0.80", "AUC overall", color=TEAL)
-stat(s, 3.4, 1.95, 2.6, "78%", "of AI images flagged at 50%", color=AMBER)
-stat(s, 6.1, 1.95, 2.6, "71%", "of real photos cleared at 50%", color=TEAL)
-table(s, 0.7, 3.55, 5.9, 2.3,
-      ["Generator", "Seen in training", "Never seen"],
-      [["SD 1.5", "0.84", "0.82"],
-       ["SDXL", "0.81", "0.77"],
-       ["Gemini", "0.76", "0.77"],
+s = slide("Results and Discussion (4/4)", "Geometry alone detects AI images, and the app explains why")
+stat(s, 0.92, 1.6, 3.7, "0.92", "best AUC, residuals only (learned features in Sarkar et al.: 0.88 to 0.94)")
+stat(s, 4.82, 1.6, 3.7, "0.80", "demo app, cross-validated AUC")
+stat(s, 8.72, 1.6, 3.7, "78% / 71%", "AI images flagged / real photos cleared at 50%")
+heading(s, 0.92, 3.1, 5.6, "SIX CLASSIFIERS ON RESIDUALS (BEST: RANDOM FOREST)", size=13)
+table(s, 0.92, 3.5, 5.6, 2.2, ["Task", "AUC"],
+      [["York Urban vs SD 1.5", "0.92"], ["York Urban vs SDXL", "0.88"],
+       ["Commons vs SDXL", "0.81"], ["Field of view matched", "0.81"]],
+      [4.3, 1.3], size=13)
+heading(s, 6.82, 3.1, 5.6, "APP SCORE BY GENERATOR", size=13)
+table(s, 6.82, 3.5, 5.6, 2.2, ["Generator", "Seen in training", "Never seen"],
+      [["SD 1.5", "0.84", "0.82"], ["SDXL", "0.81", "0.77"], ["Gemini", "0.76", "0.77"],
        ["ChatGPT", "0.59", "0.63"]],
-      col_w=[2.1, 1.9, 1.9], fsize=13)
-table(s, 6.95, 3.55, 5.68, 2.3,
-      ["Classifier, same 10 features", "AUC"],
-      [["Random forest (the app)", "0.80"],
-       ["Extra trees", "0.78"],
-       ["Gradient boosting", "0.78"],
-       ["Logistic regression", "0.77"]],
-      col_w=[4.3, 1.38], fsize=13)
-card(s, 9.0, 1.9, 3.63, 1.45, fill=LIGHT)
-textbox(s, 9.25, 2.0, 3.15, 1.25,
-        "Never seen: trained without that generator, then tested on it. ChatGPT is the hard case, "
-        "and has the fewest images (35).",
-        size=12.5, color=GREY, anchor=MSO_ANCHOR.MIDDLE)
-card(s, 0.7, 6.05, 11.93, 1.0, fill=NAVY)
-textbox(s, 1.0, 6.1, 11.4, 0.9, anchor=MSO_ANCHOR.MIDDLE, text=
-        "Left out on purpose: image shape. Every AI image here is 4:3, so width ÷ height alone scores 0.62 "
-        "and lifts the total to 0.85. That is a dataset shortcut, not geometry.",
-        size=14, bold=True, color=WHITE)
-notes(s, "Swapping the classifier does not help: the random forest is already the best, so the limit is "
-         "in the ten measurements, not the model. More real photos and more ChatGPT images are the honest "
-         "way up. Numbers: results/app_model_report.md and results/app_model_comparison.md.")
+      [1.9, 1.85, 1.85], size=13)
+text(s, 0.92, 5.9, 11.5, 0.95,
+     ["Readable residuals reach the accuracy of learned geometric features. Image shape is left out on "
+      "purpose: every AI image here is 4:3, so it would be a dataset shortcut, not geometry.",
+      "Objectives 2 and 3 achieved. Live demo: One Camera or Not?"],
+     size=14, color=GREY, space_after=4)
+notes(s, "Six algorithms: logistic regression, decision tree, SVM, random forest, naive Bayes, kNN; "
+         "five-fold cross-validation. Other classifiers on the app's features score 0.77 to 0.78. Then "
+         "switch to the app: python -m streamlit run app/streamlit_app.py, localhost:8501/?examples=all.")
 
-# ================================================================== demonstration
-s = slide()
-title(s, "Demonstration: One Camera or Not?", "Live app: any image in, a measured and explained answer out")
-picture(s, "app_summary.png", 0.7, 1.9, w=6.3)
-picture(s, "app_result_card.png", 0.7, 3.95, w=6.3)
-card(s, 7.25, 1.9, 5.38, 5.15, fill=LIGHT)
-textbox(s, 7.55, 2.1, 4.8, 0.4, "RUN", size=12, bold=True, color=NAVY)
-textbox(s, 7.55, 2.5, 4.8, 0.6,
-        ["python -m streamlit run app/streamlit_app.py",
-         "localhost:8501/?examples=all"],
-        size=12, font="Courier New", color=TEAL, space_after=2)
-textbox(s, 7.55, 3.25, 4.8, 0.4, "DEMO ORDER (3 MINUTES)", size=12, bold=True, color=NAVY)
-bullets(s, 7.55, 3.65, 4.8, 2.2, [
-    "Real corridor: 649 and 713 px vs a true 675 px",
-    "Gemini classroom: directions disagree by 94%",
-    "ChatGPT lecture hall: “unclear”, the hard case",
-    "A Gemini image that fools it: a check, not proof",
-    "An image it cannot measure, and why",
-    "An image from the audience",
-], size=12.5, space_after=4)
-textbox(s, 7.55, 6.0, 4.8, 0.9,
-        "Score: AUC 0.80, well calibrated. Flags 78% of AI images, clears 71% of real photos. "
-        "Built-in examples were held out of training.",
-        size=12, italic=True, color=GREY)
-notes(s, "The app runs the same code as the report. Bookmark the examples link before presenting. "
-         "If someone uploads a landscape or a portrait, it will say it cannot measure it: that is "
-         "the applicability rule working, not a bug.")
+# ================================================================== 18 conclusion
+s = slide("Conclusion and Future Scope")
+heading(s, 0.92, 1.3, 6.6, "CONCLUSION")
+bullets(s, 0.92, 1.8, 6.6, 5.0, [
+    "AI images get the directions roughly right but do not commit to one camera: focal agreement is "
+    "2.5 to 3 times worse than real photos.",
+    "The result holds for two very different real photo sets and survives two robustness checks.",
+    "A bigger model (SD 1.5 to SDXL) improves orientation, not camera coherence.",
+    "Gemini and ChatGPT still fail; whether they improved on the SD models is not yet shown.",
+    "Readable residuals reach learned-detector accuracy, and the app explains every score.",
+], size=15.5, space_after=9)
+text(s, 0.92, 6.3, 6.6, 0.45, "All three objectives were achieved.", size=16, bold=True, color=ACCENT)
+box(s, 7.8, 1.3, 4.62, 5.45)
+heading(s, 8.0, 1.45, 4.25, "FUTURE SCOPE")
+bullets(s, 8.0, 1.95, 4.25, 4.7, [
+    "Line-rich test of the newest models: 250 prompts each, plus Flux and Midjourney.",
+    "Find WHERE an image breaks: per-region camera checks for inpainting and splicing.",
+    "Shadows on real photos, pairing shadows with objects (SAM 2).",
+    "Combine with a learned detector; test cropping and compression.",
+], size=15, space_after=12)
 
-# ================================================================== conclusion
-s = slide(dark=True)
-title(s, "Conclusion", dark=True)
-concl = [
-    ("Generators reproduce orientation, not the camera",
-     "Right angles are close to real photos after control; focal agreement is 2.5 to 3 times worse."),
-    ("The result does not depend on the real reference",
-     "A hand-picked benchmark and ordinary internet photos give the same answer."),
-    ("Scale is not closing the gap",
-     "SD 1.5 → SDXL improves orientation and leaves camera coherence unchanged."),
-    ("The newest models still fail",
-     "Gemini and ChatGPT remain worse than both real sets; whether they improved is not yet known."),
-    ("Applicability must be tested, not assumed",
-     "The right-angle test does not apply to angled streets; ignoring that flips the verdict."),
-]
-for i, (hd, body) in enumerate(concl):
-    y = 1.9 + i * 0.98
-    dot = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(0.75), Inches(y + 0.1), Inches(0.28), Inches(0.28))
-    dot.fill.solid(); dot.fill.fore_color.rgb = AMBER; dot.line.fill.background()
-    dot.shadow.inherit = False
-    textbox(s, 1.3, y, 11.3, 0.42, hd, size=17, bold=True, color=WHITE, font=HEAD_FONT)
-    textbox(s, 1.3, y + 0.45, 11.3, 0.45, body, size=13, color=PALE)
-textbox(s, 0.75, 6.95, 11.93, 0.4,
-        "Thesis: an AI image looks photographic locally, but there is no single camera behind it.",
-        size=14, italic=True, bold=True, color=AMBER)
-notes(s, "If asked for one sentence, use the line at the bottom.")
+# ================================================================== 19 schedule
+s = slide("Schedule of the Work")
+WEEKS = ["Week 1\n14 to 20 Sep", "Week 2\n21 to 27 Sep", "Week 3\n28 Sep to 4 Oct", "Week 4\n5 to 11 Oct"]
+TASKS = [("Literature review, problem statement, plan", {0}, "Done"),
+         ("Geometry pipeline and synthetic validation (Obj. 1)", {0}, "Done"),
+         ("Real-photo baselines: York Urban, Commons (Obj. 1)", {0, 1}, "Done"),
+         ("Generated sets: SD 1.5, SDXL (Obj. 2)", {0, 1, 2}, "Done"),
+         ("Applicability rule, Atlanta measure, classifiers (Obj. 1, 2)", {1, 2}, "Done"),
+         ("Frontier models: Gemini, ChatGPT (Obj. 2)", {2}, "Done"),
+         ("Robustness checks and demo app (Obj. 2, 3)", {2}, "Done"),
+         ("Report, slides, code release on GitHub", {2}, "Done"),
+         ("Flux run, similarity reports, final edits, viva", {3}, "Planned")]
+rows, shade = [], {}
+for i, (task, weeks, status) in enumerate(TASKS, start=1):
+    rows.append([task] + ["" for _ in WEEKS] + [status])
+    for w in weeks:
+        shade[(i, w + 1)] = PLAN if status == "Planned" else RGBColor(0x9E, 0x9E, 0x9E)
+table(s, 0.62, 1.3, 12.1, 5.2, ["Task"] + WEEKS + ["Status"], rows, [5.0, 1.55, 1.55, 1.55, 1.55, 0.9],
+      size=14, shade=shade)
+text(s, 0.62, 6.6, 12.1, 0.35, "Grey: completed. Pink: planned.", size=12, italic=True, color=GREY)
+notes(s, "Dates follow the project's commit history. Adjust week 1 if the literature review started "
+         "earlier.")
 
-# ================================================================== future
-s = slide()
-title(s, "Future Scope")
-items = [
-    ("Powered frontier test", "250 line-rich prompts per model, plus Flux and Midjourney. Flux is set up "
-                              "to run 4-bit on our 8 GB GPU.", TEAL),
-    ("Shadow association", "SSIS or SAM 2 to pair shadows with objects; the wedge LP above it is "
-                           "built and validated.", NAVY),
-    ("Remaining levels", "Horizon, cross-ratio, conics, reflections and agreement with depth "
-                         "networks.", TEAL),
-    ("Mechanism", "Why does scale not fix the camera? Aspect ratio is ruled out; resolution and "
-                  "receptive field remain.", AMBER),
-    ("Atlanta-style regional fit", "Redo the regional analysis without assuming every vanishing "
-                                   "point pair is at right angles.", NAVY),
-    ("Perception study", "Which violations are severe in the maths but unnoticed by people.", TEAL),
-]
-for i, (hd, body, col) in enumerate(items):
-    x = 0.7 + (i % 3) * 4.12
-    y = 2.1 + (i // 3) * 2.4
-    card(s, x, y, 3.85, 2.05, fill=LIGHT)
-    dot = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(x + 0.3), Inches(y + 0.28),
-                             Inches(0.36), Inches(0.36))
-    dot.fill.solid(); dot.fill.fore_color.rgb = col; dot.line.fill.background()
-    dot.shadow.inherit = False
-    textbox(s, x + 0.82, y + 0.3, 2.8, 0.4, hd, size=14.5, bold=True, color=NAVY, font=HEAD_FONT)
-    textbox(s, x + 0.3, y + 0.85, 3.25, 1.05, body, size=12, color=GREY)
-notes(s, "The powered frontier test is the highest-value next step and needs no new code.")
-
-# ================================================================== references
-s = slide()
-title(s, "References")
-refs = [
-    "[1] A. Sarkar et al., “Shadows Don’t Lie and Lines Can’t Bend! Generative Models "
-    "don’t know Projective Geometry…for now,” CVPR, 2024.",
-    "[2] R. Hartley and A. Zisserman, Multiple View Geometry in Computer Vision, 2nd ed., "
-    "Cambridge University Press, 2004.",
+# ================================================================== 20 references
+s = slide("References")
+REFS = [
+    "[1] A. Sarkar et al., “Shadows Don’t Lie and Lines Can’t Bend! Generative Models don’t "
+    "know Projective Geometry…for now,” CVPR, 2024.",
+    "[2] R. Hartley and A. Zisserman, Multiple View Geometry in Computer Vision, 2nd ed., Cambridge "
+    "University Press, 2004.",
     "[3] E. Kee, J. F. O’Brien and H. Farid, “Exposing photo manipulation with inconsistent "
     "shadows,” ACM TOG, vol. 32, no. 3, 2013.",
-    "[4] A. Criminisi, I. Reid and A. Zisserman, “Single view metrology,” IJCV, vol. 40, "
-    "no. 2, pp. 123-148, 2000.",
-    "[5] J. M. Coughlan and A. L. Yuille, “Manhattan world,” ICCV, 1999.",
-    "[6] G. Schindler and F. Dellaert, “Atlanta world,” CVPR, 2004.",
-    "[7] P. Denis, J. H. Elder and F. J. Estrada, “Efficient edge-based methods for estimating "
+    "[4] H. Farid, “Perspective (in)consistency of paint by text,” arXiv, 2022.",
+    "[5] A. Criminisi, I. Reid and A. Zisserman, “Single view metrology,” IJCV, vol. 40, no. 2, "
+    "pp. 123-148, 2000.",
+    "[6] J. M. Coughlan and A. L. Yuille, “Manhattan world,” ICCV, 1999.",
+    "[7] G. Schindler and F. Dellaert, “Atlanta world,” CVPR, 2004.",
+    "[8] P. Denis, J. H. Elder and F. J. Estrada, “Efficient edge-based methods for estimating "
     "Manhattan frames in urban imagery,” ECCV, 2008.",
-    "[8] R. Grompone von Gioi et al., “LSD: a fast line segment detector with a false detection "
+    "[9] R. Grompone von Gioi et al., “LSD: a fast line segment detector with a false detection "
     "control,” IEEE TPAMI, vol. 32, no. 4, 2010.",
-    "[9] B. Efron and R. J. Tibshirani, An Introduction to the Bootstrap, Chapman & Hall, 1993.",
-    "[10] L. Breiman, “Random forests,” Machine Learning, vol. 45, no. 1, 2001.",
+    "[10] M. El Banani et al., “Probing the 3D awareness of visual foundation models,” CVPR, 2024.",
     "[11] D. Podell et al., “SDXL: improving latent diffusion models for high-resolution image "
     "synthesis,” ICLR, 2024.",
-    "[12] R. Rombach et al., “High-resolution image synthesis with latent diffusion "
-    "models,” CVPR, 2022.",
+    "[12] L. Breiman, “Random forests,” Machine Learning, vol. 45, no. 1, 2001.",
 ]
-tb = s.shapes.add_textbox(Inches(0.7), Inches(1.75), Inches(11.93), Inches(5.0))
-tf = tb.text_frame
-tf.word_wrap = True
-tf.margin_left = tf.margin_right = 0
-for i, ref in enumerate(refs):
-    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-    p.space_after = Pt(7)
-    r = p.add_run(); r.text = ref
-    r.font.size = Pt(13.5); r.font.color.rgb = INK; r.font.name = BODY_FONT
-textbox(s, 0.7, 6.95, 11.93, 0.4,
-        "Dataset credits: York Urban Database (Elder Laboratory, York University); Wikimedia Commons "
-        "photographs under CC licences, per-image attribution in the project metadata.",
-        size=11, italic=True, color=GREY)
-notes(s, "The full list (26 references) is in the report. Check details against publisher records "
-         "before submission.")
+text(s, 0.92, 1.25, 11.5, 5.3, REFS, size=15, space_after=5)
+text(s, 0.92, 6.6, 11.5, 0.35, "Full list of 26 references in the report. Datasets: York Urban (Elder "
+                               "Laboratory, York University); Wikimedia Commons photos under CC licences.",
+     size=11, italic=True, color=GREY)
+
+# ------------------------------------------------------------------ drop the template's instruction slides
+sld_ids = prs.slides._sldIdLst
+for sld_id in list(sld_ids)[1:len(template_slides)]:
+    prs.part.drop_rel(sld_id.rId)
+    sld_ids.remove(sld_id)
 
 
 # ------------------------------------------------------------------ checks + save
@@ -814,4 +622,4 @@ try:
 except PermissionError:
     saved = OUT.with_name(OUT.stem + "_v2" + OUT.suffix)
     prs.save(str(saved))
-print("written:", saved, "| slides:", len(prs.slides))
+print(f"written: {saved} | slides: {len(prs.slides)}")
