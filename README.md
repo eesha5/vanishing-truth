@@ -175,14 +175,6 @@ The synthetic tests build random pinhole scenes, check that vanishing points and
 are recovered (VPs within 0.5 degrees, f within 3%), and check that each residual grows when its
 rule is deliberately broken.
 
-## Team
-
-CA-3 mini project, Computer Vision.
-
-| Name | PRN | Contribution |
-|---|---|---|
-| | | |
-
 ## References
 
 - J. Denis, J. H. Elder and F. Estrada, "Efficient edge-based methods for estimating Manhattan
