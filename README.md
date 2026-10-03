@@ -1,4 +1,8 @@
-# One Camera or Not? Projective Geometry Consistency of AI-Generated Images
+# perspective-can-t-lie
+
+An interpretable framework for analyzing geometric inconsistencies in AI generated images.
+
+## One camera or not?
 
 A real photograph is taken by one camera, so every part of it has to agree on a single focal
 length and a single lens centre. AI image generators have no camera inside them. This project
@@ -196,3 +200,9 @@ The full reference list is in the report.
 Wikimedia Commons photographs remain under their own licences. `collect_commons.py` records each
 photo's author and licence in `data/real/commons/metadata.jsonl`; the photos shown in the report
 are credited in `results/commons_montage_credited.txt`.
+
+## License
+
+The code is released under the MIT License (see `LICENSE`). The image data in the release zips
+is not covered by it: Commons photos keep their own licences as listed in `metadata.jsonl`, and
+York Urban is subject to its authors' terms.
