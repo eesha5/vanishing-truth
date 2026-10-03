@@ -189,7 +189,8 @@ textbox(s, 1.0, 4.05, W - 2.0, 0.5,
 textbox(s, 1.0, 5.1, W - 2.0, 1.2,
         ["Team: <Name, PRN>   |   <Name, PRN>   |   <Name, PRN>",
          "Course: Computer Vision   |   Department of <Department>, <Institute>",
-         "Academic Year 2026-27"],
+         "Academic Year 2026-27",
+         "Code and data: github.com/shmizi/perspective-can-t-lie"],
         size=13, color=RGBColor(0xD6, 0xE2, 0xEA), space_after=4)
 notes(s, "Open with the one-line idea: a real photo is made by one camera, an AI image is not, and "
          "that difference can be measured in degrees and pixels.")
@@ -605,6 +606,7 @@ bullets(s, 7.15, 2.6, 5.2, 3.3, [
     "Not yet shown to be better than SD 1.5 or SDXL (p = 0.14 to 0.26)",
     "Small samples: 31 and 29 usable images",
     "ChatGPT's impossible-pair rate (39%) looks real; its focal spread does not",
+    "Hardest to detect: ChatGPT AUC 0.59, Gemini 0.76 (SD models 0.81 to 0.84)",
 ], size=14, space_after=10)
 card(s, 0.7, 6.1, 11.93, 0.95, fill=NAVY)
 textbox(s, 1.0, 6.27, 11.3, 0.65,
@@ -612,7 +614,55 @@ textbox(s, 1.0, 6.27, 11.3, 0.65,
         size=15, bold=True, color=WHITE)
 notes(s, "Gemini (nano banana, via Antigravity) and ChatGPT images were made in September 2026 from "
          "the first prompt set, so they are compared with the SD and SDXL images from that same set. "
-         "Next step: 250 line-rich prompts per model at full resolution.")
+         "Next step: 250 line-rich prompts per model at full resolution. The detection AUCs in the "
+         "last bullet are the demo app's cross-validated scores for real photos against each generator.")
+
+# ================================================================== app workflow
+s = slide()
+title(s, "How the App Decides", "Geometry in, a calibrated score out. The model never sees the pixels.")
+picture(s, "app_workflow_slide.png", 0.7, 1.85, w=11.93)
+textbox(s, 0.7, 6.9, 11.93, 0.4,
+        "Same measurement code as the report. The built-in demo examples were held out of training.",
+        size=13, italic=True, color=GREY)
+notes(s, "Walk through it left to right, then right to left. The diamond is the applicability rule: "
+         "an image without lines in three directions gets no score instead of a guess. The random "
+         "forest only sees the ten numbers, so a high score always means the geometry is off, never "
+         "texture or a watermark. Calibration turns the vote into a probability, re-based so that real "
+         "and AI were equally likely before looking.")
+
+# ================================================================== app trust
+s = slide()
+title(s, "How Far to Trust the Score", "Cross-validated on 191 real photos and 434 AI images")
+stat(s, 0.7, 1.95, 2.6, "0.80", "AUC overall", color=TEAL)
+stat(s, 3.4, 1.95, 2.6, "78%", "of AI images flagged at 50%", color=AMBER)
+stat(s, 6.1, 1.95, 2.6, "71%", "of real photos cleared at 50%", color=TEAL)
+table(s, 0.7, 3.55, 5.9, 2.3,
+      ["Generator", "Seen in training", "Never seen"],
+      [["SD 1.5", "0.84", "0.82"],
+       ["SDXL", "0.81", "0.77"],
+       ["Gemini", "0.76", "0.77"],
+       ["ChatGPT", "0.59", "0.63"]],
+      col_w=[2.1, 1.9, 1.9], fsize=13)
+table(s, 6.95, 3.55, 5.68, 2.3,
+      ["Classifier, same 10 features", "AUC"],
+      [["Random forest (the app)", "0.80"],
+       ["Extra trees", "0.78"],
+       ["Gradient boosting", "0.78"],
+       ["Logistic regression", "0.77"]],
+      col_w=[4.3, 1.38], fsize=13)
+card(s, 9.0, 1.9, 3.63, 1.45, fill=LIGHT)
+textbox(s, 9.25, 2.0, 3.15, 1.25,
+        "Never seen: trained without that generator, then tested on it. ChatGPT is the hard case, "
+        "and has the fewest images (35).",
+        size=12.5, color=GREY, anchor=MSO_ANCHOR.MIDDLE)
+card(s, 0.7, 6.05, 11.93, 1.0, fill=NAVY)
+textbox(s, 1.0, 6.1, 11.4, 0.9, anchor=MSO_ANCHOR.MIDDLE, text=
+        "Left out on purpose: image shape. Every AI image here is 4:3, so width ÷ height alone scores 0.62 "
+        "and lifts the total to 0.85. That is a dataset shortcut, not geometry.",
+        size=14, bold=True, color=WHITE)
+notes(s, "Swapping the classifier does not help: the random forest is already the best, so the limit is "
+         "in the ten measurements, not the model. More real photos and more ChatGPT images are the honest "
+         "way up. Numbers: results/app_model_report.md and results/app_model_comparison.md.")
 
 # ================================================================== demonstration
 s = slide()
@@ -673,8 +723,8 @@ notes(s, "If asked for one sentence, use the line at the bottom.")
 s = slide()
 title(s, "Future Scope")
 items = [
-    ("Powered frontier test", "250 line-rich prompts per model at full resolution, plus Midjourney. "
-                              "Prompts and instructions are ready.", TEAL),
+    ("Powered frontier test", "250 line-rich prompts per model, plus Flux and Midjourney. Flux is set up "
+                              "to run 4-bit on our 8 GB GPU.", TEAL),
     ("Shadow association", "SSIS or SAM 2 to pair shadows with objects; the wedge LP above it is "
                            "built and validated.", NAVY),
     ("Remaining levels", "Horizon, cross-ratio, conics, reflections and agreement with depth "

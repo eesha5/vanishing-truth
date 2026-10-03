@@ -53,14 +53,17 @@ line-rich prompt set:
 | SDXL | 109 | 0.355 [0.272, 0.529] | 58% |
 
 Both local models differ from both real sets (Mann-Whitney p < 0.0001). On the first prompt set,
-the frontier models also differ from real photos: Gemini 0.338 (p = 0.016, n = 54) and ChatGPT
-0.491 (p = 0.014, n = 36). They do not differ significantly from the local models on that set.
+the frontier models also differ from real photos: Gemini 0.338 (p = 0.016, n = 31) and ChatGPT
+0.491 (p = 0.014, n = 29). They do not differ significantly from the local models on that set.
 The result holds when tilted cameras are excluded and when the vertical direction is required
 to be far from the image centre (`scripts/vertical_guard_sensitivity.py`).
 
 **Demo app score.** A calibrated random forest on the 10 geometry measurements only (it never
 sees pixels): 5-fold cross-validated AUC 0.80. On a generator held out of training the AUC is
-0.63 to 0.82. Full evaluation: [results/app_model_report.md](results/app_model_report.md).
+0.63 to 0.82. Other classifiers on the same features do no better (0.77 to 0.78), and image shape
+is deliberately left out because it is a dataset shortcut. Full evaluation:
+[results/app_model_report.md](results/app_model_report.md) and
+[results/app_model_comparison.md](results/app_model_comparison.md).
 
 **Limits.** This is a geometry check, not proof. It needs scenes with straight lines in three
 directions (buildings, rooms, streets). Cropped or edited photos can look inconsistent, because
@@ -130,6 +133,7 @@ python scripts/atlanta_compare.py --real data/real/commons --gen data/generated/
 python scripts/vertical_guard_sensitivity.py --out outputs/vguard
 python scripts/classify_residuals.py --csv results/four_set_summary.csv
 python scripts/train_app_model.py --refresh        # demo app model, about 20 minutes
+python scripts/compare_app_models.py               # other classifiers and the image-shape shortcut
 python scripts/plot_dot_interval.py                # report figures from results/*.csv
 python scripts/make_report_figures.py              # flowchart, example and montage figures
 ```
