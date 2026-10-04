@@ -32,7 +32,7 @@ from projgeo.explain import FEATURES
 FOLDERS = {"real-commons": "data/real/commons", "sd15_rich": "data/generated/sd15_rich",
            "sd15_pilot": "data/generated/sd15_pilot", "sdxl_rich": "data/generated/sdxl_rich",
            "sdxl_pilot": "data/generated/sdxl_pilot", "gemini": "data/generated/gemini",
-           "gptimage": "data/generated/gptimage"}
+           "gptimage": "data/generated/gptimage", "flux_rich": "data/generated/flux_rich"}
 SEEDS = (0, 1, 2)
 
 

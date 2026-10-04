@@ -40,6 +40,7 @@ SETS = {  # name: (folder or "yorkurban", is_ai, display name)
     "sdxl_pilot": ("data/generated/sdxl_pilot", 1, "SDXL"),
     "gemini": ("data/generated/gemini", 1, "Gemini"),
     "gptimage": ("data/generated/gptimage", 1, "ChatGPT"),
+    "flux_rich": ("data/generated/flux_rich", 1, "Flux"),
 }
 CACHE = Path("outputs/app_features.csv")
 # demo examples are held out of training so the app shows honest, unseen scores

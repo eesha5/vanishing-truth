@@ -84,7 +84,8 @@ def plot(rows, path, title, width=10.5, fs=1.0, row_h=0.62, pad_h=1.5):
 def main():
     rich = summarise(pd.read_csv("results/atlanta_scaling.csv"),
                      [("yorkurban", "York Urban", "real"), ("real-commons", "Commons", "real"),
-                      ("sd15_rich", "SD 1.5", "local"), ("sdxl_rich", "SDXL", "local")])
+                      ("sd15_rich", "SD 1.5", "local"), ("sdxl_rich", "SDXL", "local"),
+                      ("flux_rich", "Flux", "local")])
     fr = summarise(pd.read_csv("results/frontier.csv"),
                    [("yorkurban", "York Urban", "real"), ("real-commons", "Commons", "real"),
                     ("sdxl_pilot", "SDXL", "local"), ("sd15_pilot", "SD 1.5", "local"),
