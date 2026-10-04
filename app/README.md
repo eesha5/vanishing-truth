@@ -43,5 +43,5 @@ The seven built-in examples (`app/examples.json`) are held out of training, so t
 
 "If the image were equally likely to be real or AI before we looked, the geometry makes AI this
 likely." It is calibrated on the images we tested, so an unfamiliar generator or an unusual
-camera can fool it. Overall cross-validated AUC is about 0.80; on a generator it never saw in
-training, 0.63 to 0.82.
+camera can fool it. Overall cross-validated AUC is about 0.77; on a generator it never saw in
+training, 0.63 to 0.81 (Flux and ChatGPT are the hardest).

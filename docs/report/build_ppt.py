@@ -34,8 +34,8 @@ TABLE_STYLE = "{252108C0-F26C-423F-91A2-4CEDFFE9ED8A}"   # the template's own ta
 W = 13.333
 
 STUDENTS = [("Aarushi Rudra", "24070127001"), ("Ankur Saxena", "24070127019"),
-            ("Arnav Vadhera", "240701270125"), ("Eesha Masand", "24070127043")]
-GUIDE = ["<Name of guide>", "<Designation>"]          # to be filled in by the team
+            ("Arnav Vadhera", "24070127025"), ("Eesha Masand", "24070127043")]
+GUIDE = ["Dr. Praween Nishad", "Assistant Professor, Department of Robotics and Automation"]
 
 prs = Presentation(str(TEMPLATE))
 template_slides = list(prs.slides)
@@ -220,7 +220,7 @@ for sh in title_slide.shapes:
             p.alignment = PP_ALIGN.LEFT
             r = p.add_run()
             r.text = line
-            run_style(r, 17, color=ACCENT)
+            run_style(r, 17)
 notes(title_slide, "Open with the one-line idea: a real photo is made by one camera, an AI image is not, "
                    "and that difference can be measured in degrees and pixels. Code and data: "
                    "github.com/shmizi/perspective-can-t-lie")
@@ -355,7 +355,7 @@ bullets(s, 0.92, 3.75, 11.5, 3.0, [
 s = slide("Objectives of the Study")
 OBJ = ["To build and validate a measurement pipeline that tests whether an image's lines are consistent "
        "with a single pinhole camera, using synthetic scenes and real photographs with known cameras.",
-       "To compare images from four generators (Stable Diffusion 1.5, SDXL, Gemini and ChatGPT) with two "
+       "To compare images from five generators (Stable Diffusion 1.5, SDXL, Flux, Gemini and ChatGPT) with two "
        "sets of real photographs under matched content, and find which camera rule they break and by how "
        "much.",
        "To build an interactive application that measures any uploaded image, explains the result and "
@@ -405,16 +405,17 @@ notes(s, "Key design decision: the vanishing-point finder is never told to look 
          "the test meaningless.")
 
 s = slide("Methodology: Data Acquisition and Tools")
-table(s, 0.92, 1.3, 7.55, 3.9, ["Dataset", "Images", "Role"],
+table(s, 0.92, 1.3, 7.55, 4.3, ["Dataset", "Images", "Role"],
       [["York Urban", "102", "Hand-picked real photos with true vanishing points"],
        ["Wikimedia Commons", "358", "Ordinary real photos, 135 camera models, EXIF focal length"],
        ["Stable Diffusion 1.5", "450", "Older open model, run on our GPU, settings logged"],
        ["SDXL", "650", "Newer open model, run on our GPU, settings logged"],
+       ["FLUX.1-schnell", "250", "Newest open model (12B, 4-bit), run on our GPU"],
        ["Gemini (“nano banana”)", "181", "Closed frontier model, September 2026"],
        ["ChatGPT image model", "51", "Closed frontier model, September 2026"],
        ["Synthetic scenes", "on demand", "Known cameras and injected violations, for testing"]],
       [2.45, 1.15, 3.95], size=12.5)
-text(s, 0.92, 5.45, 7.55, 1.3,
+text(s, 0.92, 5.8, 7.55, 1.0,
      "Three prompt sets with content matched by construction. Every comparison stays within one prompt "
      "set, so a model is never compared on different scenes.", size=14, italic=True, color=GREY)
 box(s, 8.75, 1.3, 3.67, 5.45)
@@ -423,7 +424,7 @@ bullets(s, 8.95, 1.95, 3.3, 2.6, [
     "Python 3.14, OpenCV 4.13 (LSD)",
     "NumPy, SciPy (least squares, LP)",
     "scikit-learn, statsmodels",
-    "PyTorch 2.14, diffusers 0.40",
+    "PyTorch 2.14, diffusers 0.40, GGUF",
     "Streamlit 1.58 (demo app)",
     "RTX 5060 Laptop GPU, 8 GB",
 ], size=14, space_after=5)
@@ -460,23 +461,26 @@ bullets(s, 5.85, 3.45, 6.35, 3.25, [
     ("Objective 1 achieved.", True),
 ], size=15, space_after=10)
 
-s = slide("Results and Discussion (2/4)", "AI images do not have one camera")
-picture(s, "atlanta_dots_slide.png", 0.6, 1.7, w=7.4)
-text(s, 0.6, 5.45, 7.4, 1.0,
+s = slide("Results and Discussion (2/4)", "Stable Diffusion breaks the single camera; Flux comes close")
+picture(s, "atlanta_dots_slide.png", 0.55, 1.65, h=4.3)
+text(s, 0.6, 6.1, 7.4, 0.6,
      "Line-rich prompt set. Dots: medians; lines: 95% intervals; shaded band: range of the real-photo "
      "intervals.", size=12, italic=True, color=GREY)
 box(s, 8.25, 1.7, 4.17, 5.1)
 bullets(s, 8.45, 1.85, 3.8, 4.9, [
     ("Real photos: directions agree on one focal length within about 15% (0.14, 0.15).", True),
     ("SD 1.5 and SDXL: 35 to 60% disagreement (0.47, 0.36), p ≈ 3×10⁻⁵.", True),
-    "Two very different real sets agree, so the verdict does not depend on the reference.",
-    "Holds after both robustness checks (p ≤ 0.008).",
-    "A naive right-angle test made real street photos look WORSE than AI (12.2°): angled streets "
-    "are not at right angles. The applicability rule fixes this.",
-], size=13.5, space_after=7)
+    ("Flux: 0.18. Not distinguishable from real photos (p ≈ 0.17) and better than both SD models "
+     "(p ≤ 0.004). It still has more impossible pairs (48%).", True),
+    "Two very different real sets agree, and every result survives both robustness checks.",
+    "A naive right-angle test made real street photos look WORSE than AI (12.2°). The "
+    "applicability rule fixes this.",
+], size=13, space_after=6)
 notes(s, "This is the slide to defend. Bootstrap intervals, 2000 resamples; Wilson intervals for "
          "proportions; Mann-Whitney test. SD 1.5 to SDXL improves orientation (2.93 to 1.94 deg) but not "
-         "camera coherence (p = 0.55).")
+         "camera coherence (p = 0.55). Flux (250 images, 78% measurable) has a median of 0.18 [0.14, 0.30]; "
+         "it stays indistinguishable from real photos with the vertical guard and on tilted cameras only. "
+         "Not distinguishable is not the same as proven equal: the upper end of its interval is 0.30.")
 
 s = slide("Results and Discussion (3/4)", "The newest models, Gemini and ChatGPT, still fail")
 picture(s, "frontier_dots_slide.png", 0.6, 1.65, h=4.55)
@@ -487,53 +491,57 @@ bullets(s, 8.25, 2.3, 4.0, 3.85, [
     "Not yet shown to beat SD 1.5 or SDXL (p = 0.14 to 0.26).",
     "Small samples: 31 and 29 usable images.",
     "ChatGPT's impossible-pair rate (39%) looks real; its focal spread does not.",
-], size=14, space_after=9)
+    "Made from the first prompt set, so not directly comparable with Flux.",
+], size=14, space_after=8)
 box(s, 0.6, 6.35, 11.82, 0.5, fill=ACCENT)
-text(s, 0.8, 6.35, 11.4, 0.5, "The 2026 claim that the geometric giveaway has disappeared does not hold "
-                              "on this measure.", size=15, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
+text(s, 0.8, 6.35, 11.4, 0.5, "For Gemini and ChatGPT, the claim that the geometric giveaway has "
+                              "disappeared does not hold on this measure.", size=15, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
      anchor=MSO_ANCHOR.MIDDLE)
 notes(s, "Gemini and ChatGPT images were made in September 2026 from the first prompt set, so they are "
          "compared with the SD and SDXL images from that same set.")
 
 s = slide("Results and Discussion (4/4)", "Geometry alone detects AI images, and the app explains why")
 stat(s, 0.92, 1.6, 3.7, "0.92", "best AUC, residuals only (learned features in Sarkar et al.: 0.88 to 0.94)")
-stat(s, 4.82, 1.6, 3.7, "0.80", "demo app, cross-validated AUC")
-stat(s, 8.72, 1.6, 3.7, "78% / 71%", "AI images flagged / real photos cleared at 50%")
+stat(s, 4.82, 1.6, 3.7, "0.77", "demo app, cross-validated AUC, five generators")
+stat(s, 8.72, 1.6, 3.7, "78% / 62%", "AI images flagged / real photos cleared at 50%")
 heading(s, 0.92, 3.1, 5.6, "SIX CLASSIFIERS ON RESIDUALS (BEST: RANDOM FOREST)", size=13)
 table(s, 0.92, 3.5, 5.6, 2.2, ["Task", "AUC"],
       [["York Urban vs SD 1.5", "0.92"], ["York Urban vs SDXL", "0.88"],
        ["Commons vs SDXL", "0.81"], ["Field of view matched", "0.81"]],
       [4.3, 1.3], size=13)
 heading(s, 6.82, 3.1, 5.6, "APP SCORE BY GENERATOR", size=13)
-table(s, 6.82, 3.5, 5.6, 2.2, ["Generator", "Seen in training", "Never seen"],
-      [["SD 1.5", "0.84", "0.82"], ["SDXL", "0.81", "0.77"], ["Gemini", "0.76", "0.77"],
-       ["ChatGPT", "0.59", "0.63"]],
-      [1.9, 1.85, 1.85], size=13)
+table(s, 6.82, 3.5, 5.6, 2.3, ["Generator", "Seen in training", "Never seen"],
+      [["SD 1.5", "0.83", "0.81"], ["SDXL", "0.80", "0.76"], ["Flux", "0.73", "0.64"],
+       ["Gemini", "0.74", "0.73"], ["ChatGPT", "0.62", "0.63"]],
+      [1.9, 1.85, 1.85], size=12.5)
 text(s, 0.92, 5.9, 11.5, 0.95,
      ["Readable residuals reach the accuracy of learned geometric features. Image shape is left out on "
       "purpose: every AI image here is 4:3, so it would be a dataset shortcut, not geometry.",
       "Objectives 2 and 3 achieved. Live demo: One Camera or Not?"],
      size=14, color=GREY, space_after=4)
 notes(s, "Six algorithms: logistic regression, decision tree, SVM, random forest, naive Bayes, kNN; "
-         "five-fold cross-validation. Other classifiers on the app's features score 0.77 to 0.78. Then "
+         "five-fold cross-validation. Adding Flux lowered the app's AUC from 0.80 to 0.77: it is the "
+         "hardest generator, which is the honest result. Other classifiers score 0.74 to 0.75. Then "
          "switch to the app: python -m streamlit run app/streamlit_app.py, localhost:8501/?examples=all.")
 
 # ================================================================== 18 conclusion
 s = slide("Conclusion and Future Scope")
 heading(s, 0.92, 1.3, 6.6, "CONCLUSION")
 bullets(s, 0.92, 1.8, 6.6, 5.0, [
-    "AI images get the directions roughly right but do not commit to one camera: focal agreement is "
-    "2.5 to 3 times worse than real photos.",
-    "The result holds for two very different real photo sets and survives two robustness checks.",
-    "A bigger model (SD 1.5 to SDXL) improves orientation, not camera coherence.",
-    "Gemini and ChatGPT still fail; whether they improved on the SD models is not yet shown.",
+    "Stable Diffusion images get the directions roughly right but do not commit to one camera: focal "
+    "agreement is 2.5 to 3 times worse than real photos.",
+    "A bigger model of the same kind (SD 1.5 to SDXL) improves orientation, not camera coherence.",
+    "Flux, a newer architecture, comes close to real photos on focal agreement, though it still makes "
+    "more impossible pairs.",
+    "Gemini and ChatGPT still fail on the first prompt set.",
+    "Results hold for two different real photo sets and survive two robustness checks.",
     "Readable residuals reach learned-detector accuracy, and the app explains every score.",
-], size=15.5, space_after=9)
+], size=14.5, space_after=7)
 text(s, 0.92, 6.3, 6.6, 0.45, "All three objectives were achieved.", size=16, bold=True, color=ACCENT)
 box(s, 7.8, 1.3, 4.62, 5.45)
 heading(s, 8.0, 1.45, 4.25, "FUTURE SCOPE")
 bullets(s, 8.0, 1.95, 4.25, 4.7, [
-    "Line-rich test of the newest models: 250 prompts each, plus Flux and Midjourney.",
+    "Line-rich test of Gemini and ChatGPT, plus Midjourney; find out what Flux does differently.",
     "Find WHERE an image breaks: per-region camera checks for inpainting and splicing.",
     "Shadows on real photos, pairing shadows with objects (SAM 2).",
     "Combine with a learned detector; test cropping and compression.",
@@ -541,7 +549,7 @@ bullets(s, 8.0, 1.95, 4.25, 4.7, [
 
 # ================================================================== 19 schedule
 s = slide("Schedule of the Work")
-WEEKS = ["Week 1\n14 to 20 Sep", "Week 2\n21 to 27 Sep", "Week 3\n28 Sep to 4 Oct", "Week 4\n5 to 11 Oct"]
+WEEKS = ["Week 1\n14 to 20 Sep", "Week 2\n21 to 27 Sep", "Week 3\n28 Sep to 4 Oct", "Week 4\nAnd ahead"]
 TASKS = [("Literature review, problem statement, plan", {0}, "Done"),
          ("Geometry pipeline and synthetic validation (Obj. 1)", {0}, "Done"),
          ("Real-photo baselines: York Urban, Commons (Obj. 1)", {0, 1}, "Done"),
@@ -550,15 +558,16 @@ TASKS = [("Literature review, problem statement, plan", {0}, "Done"),
          ("Frontier models: Gemini, ChatGPT (Obj. 2)", {2}, "Done"),
          ("Robustness checks and demo app (Obj. 2, 3)", {2}, "Done"),
          ("Report, slides, code release on GitHub", {2}, "Done"),
-         ("Flux run, similarity reports, final edits, viva", {3}, "Planned")]
+         ("Flux: 250 images, measured, app retrained (Obj. 2, 3)", {2}, "Done"),
+         ("Future scope: more frontier and real images for training", {3}, "Planned")]
 rows, shade = [], {}
 for i, (task, weeks, status) in enumerate(TASKS, start=1):
     rows.append([task] + ["" for _ in WEEKS] + [status])
     for w in weeks:
         shade[(i, w + 1)] = PLAN if status == "Planned" else RGBColor(0x9E, 0x9E, 0x9E)
 table(s, 0.62, 1.3, 12.1, 5.2, ["Task"] + WEEKS + ["Status"], rows, [5.0, 1.55, 1.55, 1.55, 1.55, 0.9],
-      size=14, shade=shade)
-text(s, 0.62, 6.6, 12.1, 0.35, "Grey: completed. Pink: planned.", size=12, italic=True, color=GREY)
+      size=13, shade=shade)
+text(s, 0.62, 6.7, 12.1, 0.35, "Grey: completed. Pink: planned.", size=12, italic=True, color=GREY)
 notes(s, "Dates follow the project's commit history. Adjust week 1 if the literature review started "
          "earlier.")
 

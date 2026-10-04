@@ -44,6 +44,8 @@ REFS = {
     "jin": "L. Jin et al., “Perspective fields for single image camera calibration,” in Proc. CVPR, 2023.",
     "veicht": "A. Veicht et al., “GeoCalib: Learning single-image calibration with geometric optimization,” in Proc. ECCV, 2024.",
     "ldm": "R. Rombach, A. Blattmann, D. Lorenz, P. Esser and B. Ommer, “High-resolution image synthesis with latent diffusion models,” in Proc. CVPR, 2022.",
+    "esser": "P. Esser et al., “Scaling rectified flow transformers for high-resolution image synthesis,” in Proc. Int. Conf. Machine Learning (ICML), 2024.",
+    "flux": "Black Forest Labs, “FLUX.1 [schnell],” model card and weights, Hugging Face, 2024. [Online]. Available: https://huggingface.co/black-forest-labs/FLUX.1-schnell",
     "sdxl": "D. Podell et al., “SDXL: Improving latent diffusion models for high-resolution image synthesis,” in Proc. Int. Conf. Learning Representations (ICLR), 2024.",
     "efron": "B. Efron and R. J. Tibshirani, An Introduction to the Bootstrap. New York, NY, USA: Chapman & Hall, 1993.",
     "mannwhitney": "H. B. Mann and D. R. Whitney, “On a test of whether one of two random variables is stochastically larger than the other,” Annals of Mathematical Statistics, vol. 18, no. 1, pp. 50-60, 1947.",
@@ -310,8 +312,8 @@ number("Do images from current diffusion models follow the rules of a single pin
        "compared with real photos of similar scenes taken with similar camera settings?")
 number("If they break the rules, which part fails: the right angles between the scene's main "
        "directions, or the camera's focal length and principal point agreeing across the image?")
-number("Does the problem shrink as models get bigger, and do the newest closed models (Google Gemini "
-       "and OpenAI's ChatGPT image model) still show it?")
+number("Does the problem shrink as models get bigger or newer, and do the newest closed models (Google "
+       "Gemini and OpenAI's ChatGPT image model) still show it?")
 number("Can simple, readable geometric residuals compete with learned classifiers at telling real from "
        "generated?")
 
@@ -325,8 +327,8 @@ number("O1: Build and validate a pipeline for line-based camera rules, namely va
        "concurrency and single-camera coherence, using ground truth.")
 number("O2: Measure the normal range of every residual on real photos, using both a hand-picked "
        "benchmark and a set of ordinary internet photos from many cameras.")
-number("O3: Build generated image sets with matched content from several models, two run locally with "
-       "every setting logged and two closed frontier models.")
+number("O3: Build generated image sets with matched content from several models, three run locally "
+       "with every setting logged and two closed frontier models.")
 number("O4: Define an applicability rule that decides whether an image can be measured, without using "
        "the residual being measured, and validate it against ground truth.")
 number("O5: Compare generators with real photos under matched content and camera settings, and test "
@@ -339,8 +341,8 @@ number("O7: Build an interactive application that applies the measurement to any
 doc.add_heading("3.4 Scope and Limitations", level=2)
 para("Scope. One image at a time. Two line-based rule levels are built and validated in full "
      "(vanishing-point concurrency and camera coherence), plus a regional camera analysis and the "
-     "shadow rule at the geometry level. Four generators are tested: Stable Diffusion 1.5 {c:ldm} and "
-     "SDXL {c:sdxl}, run locally, and two closed frontier models, Google Gemini image generation "
+     "shadow rule at the geometry level. Five generators are tested: Stable Diffusion 1.5 {c:ldm}, "
+     "SDXL {c:sdxl} and FLUX.1-schnell {c:flux}, run locally, and two closed frontier models, Google Gemini image generation "
      "(\"nano banana\") and OpenAI's image model in ChatGPT. They are compared against two real photo "
      "sets.")
 para("Limitations. The frontier models were used through their apps, so their internal settings are "
@@ -482,6 +484,9 @@ table(["Dataset", "Size", "Role", "Source and settings"],
         "30 steps, guidance 6.0; seed and prompt logged per image"],
        ["SDXL", "200 + 250 + 120 + 80 images", "Newer open model",
         "30 steps, guidance 6.0, CPU offload; 1024x768 plus 1:1 and 16:9 variants"],
+       ["FLUX.1-schnell", "250 images, 1024x768", "Newest open model",
+        "4 steps, no guidance; 4-bit GGUF transformer streamed block by block on an 8 GB GPU; "
+        "line-rich prompt set, same seeds as SD 1.5 and SDXL"],
        ["Gemini (\"nano banana\")", "181 images (168 at 640x480, 13 larger)", "Closed frontier model",
         "Google Gemini image generation used through Antigravity, September 2026; first prompt set, "
         "numbered by prompt; internal settings not exposed"],
@@ -533,8 +538,8 @@ para("For each image the app shows the line families in colour, the focal length
      "guessing. It also warns when a reading is unreliable: a camera held almost perfectly level, or "
      "an aspect ratio that suggests the image was cropped.")
 para("The app also gives a percentage likely AI-generated. This comes from a random forest "
-     "{c:breiman} trained on ten geometric residuals of 625 admitted images, calibrated with Platt "
-     "scaling on out-of-fold predictions. The training data is 69 per cent AI images, so the "
+     "{c:breiman} trained on ten geometric residuals of 819 admitted images, calibrated with Platt "
+     "scaling on out-of-fold predictions. The training data is 77 per cent AI images, so the "
      "probability is re-based to a 50/50 prior: the number answers \"if this image were equally "
      "likely to be real or AI before we looked, how likely is AI given its geometry?\" The seven "
      "built-in examples were held out of training, so their scores are honest. Its accuracy is "
@@ -606,16 +611,16 @@ para("The main comparison uses Atlanta focal consistency on images that pass the
      "with the line-rich prompt set for the generators. Medians come with bootstrap 95 per cent "
      "confidence intervals {c:efron}, proportions with Wilson intervals {c:wilson}, and differences are "
      "tested with the Mann-Whitney test {c:mannwhitney}.")
-table(["Quantity", "York Urban (real)", "Commons (real)", "SD 1.5", "SDXL"],
-      [["Images admitted by the rule", "72", "121", "92", "112"],
-       ["With two or more horizontal directions", "72", "120", "87", "109"],
-       ["Usable for log-focal spread", "65", "91", "53", "65"],
+table(["Quantity", "York Urban (real)", "Commons (real)", "SD 1.5", "SDXL", "Flux"],
+      [["Images admitted by the rule", "72", "121", "92", "112", "194"],
+       ["With two or more horizontal directions", "72", "120", "87", "109", "194"],
+       ["Usable for log-focal spread", "65", "91", "53", "65", "166"],
        ["Log-focal spread, median [95% CI]", "0.142 [0.106, 0.221]", "0.152 [0.093, 0.220]",
-        "0.465 [0.324, 0.709]", "0.355 [0.272, 0.529]"],
+        "0.465 [0.324, 0.709]", "0.355 [0.272, 0.529]", "0.179 [0.136, 0.299]"],
        ["Images with an impossible pair", "28% [19, 39]", "44% [36, 53]", "68% [57, 77]",
-        "58% [48, 66]"],
-       ["Manhattan residual (secondary)", "0.65 deg", "2.82 deg", "2.93 deg", "1.94 deg"]],
-      widths=[2.0, 1.15, 1.15, 1.1, 1.1], fsize=8.8)
+        "58% [48, 66]", "48% [41, 55]"],
+       ["Manhattan residual (secondary)", "0.65 deg", "2.82 deg", "2.93 deg", "1.94 deg", "1.16 deg"]],
+      widths=[1.75, 0.95, 0.95, 0.95, 0.95, 0.95], fsize=8.4)
 caption("Table 5.2: Atlanta focal consistency on admitted images (line-rich prompt set for the "
         "generators). \"Usable\" counts images where at least two pairs give a real focal length.")
 figure("atlanta_dots.png", 6.4)
@@ -623,14 +628,16 @@ caption("Figure 5.4: Median log-focal spread (left) and share of images with at 
         "camera could produce (right), with 95 per cent intervals. The shaded band spans the two real "
         "sets' intervals. n is the number of images usable for the log-focal spread.")
 para("The two real sets agree with each other within their confidence intervals (0.142 and 0.152). "
-     "Both generators sit clearly higher (0.355 and 0.465), and the intervals do not overlap. The "
+     "Both Stable Diffusion models sit clearly higher (0.355 and 0.465), and the intervals do not "
+     "overlap. The "
      "Mann-Whitney test gives p of about 3 × 10⁻⁵ against either real set. In plain words: in a real "
      "photo, the horizontal directions agree on one focal length to within about 15 per cent. In a "
      "generated image they disagree by 35 to 60 per cent. This holds against the hand-picked set and "
-     "against ordinary internet photos, which is what makes it believable.")
+     "against ordinary internet photos, which is what makes it believable. Flux is the exception and "
+     "is discussed in Section 5.5.2: at 0.179 it cannot be told apart from either real set.")
 para("The share of images with an impossible pair rises from 28 per cent (hand-picked real) to 44 per "
-     "cent (ordinary real) to 58 and 68 per cent (generated). This is a steady rise, not a clean split, "
-     "so the log-focal spread is the better statistic.")
+     "cent (ordinary real) to 58 and 68 per cent (Stable Diffusion), with Flux at 48 per cent. This is a "
+     "steady rise, not a clean split, so the log-focal spread is the better statistic.")
 
 doc.add_heading("5.4.1 Robustness checks", level=3)
 para("We ran two checks on the main measure. Both came from looking closely at single images.")
@@ -644,22 +651,24 @@ para("Check 1: picking the wrong vertical. The vertical vanishing point is chose
 para("Check 2: nearly level cameras. When a camera is held almost exactly level, vertical lines are "
      "almost parallel and their vanishing point is very far away. The focal-length formula then "
      "multiplies a tiny number by a huge one, so small errors are magnified. Generated images are level "
-     "far more often than real photos: 76 to 80 per cent of SD 1.5 and SDXL images have their vertical "
-     "vanishing point more than 20 image heights away, against 31 to 51 per cent of real photos. If that "
+     "far more often than real photos: 79 to 80 per cent of SD 1.5 and SDXL images have their vertical "
+     "vanishing point more than 20 image heights away, against 31 to 51 per cent of real photos (and "
+     "only 25 per cent of Flux images). If that "
      "alone raised their scores, the main result would be an artefact. It does not. Within each set, "
      "levelness is only weakly related to the score (Spearman rho 0.0 to 0.3, mostly not significant). "
      "And keeping only clearly tilted cameras (vertical vanishing point within 50 image heights), "
      "generated images are still two to three times worse than real photos, with p of 0.008 or less.")
-table(["Condition", "York Urban", "Commons", "SD 1.5", "SDXL", "Largest p vs real"],
-      [["As published", "0.142 (65)", "0.152 (91)", "0.465 (53)", "0.355 (65)", "0.0001"],
+table(["Condition", "York Urban", "Commons", "SD 1.5", "SDXL", "Flux", "Largest p, SD vs real"],
+      [["As published", "0.142 (65)", "0.152 (91)", "0.465 (53)", "0.355 (65)", "0.179 (166)", "0.0001"],
        ["Vertical VP at least 1 image height from centre", "0.142 (65)", "0.149 (88)", "0.465 (53)",
-        "0.355 (65)", "0.0001"],
+        "0.355 (65)", "0.184 (165)", "0.0001"],
        ["Clearly tilted cameras only (vertical VP within 50 image heights)", "0.135 (52)",
-        "0.135 (74)", "0.423 (23)", "0.285 (27)", "0.008"]],
-      widths=[2.3, 0.85, 0.85, 0.85, 0.85, 0.8], fsize=8.6)
+        "0.135 (74)", "0.423 (23)", "0.285 (27)", "0.159 (150)", "0.008"]],
+      widths=[1.95, 0.75, 0.75, 0.75, 0.75, 0.8, 0.75], fsize=8.2)
 caption("Table 5.3: Median log-focal spread under two robustness checks, line-rich prompt set. Usable "
-        "images in brackets. The last column is the largest Mann-Whitney p of either generator against "
-        "either real set.")
+        "images in brackets. The last column is the largest Mann-Whitney p of either Stable Diffusion "
+        "model against either real set. Flux stays not significantly different from real photos in "
+        "every row (p 0.12 to 0.31).")
 para("The frontier models of Section 5.5.1 stay worse than real photos under both checks. Under check "
      "1 nothing changes (p 0.014 to 0.020). On the tilted-only subset their samples shrink to 19 and 23 "
      "images and p rises to between 0.02 and 0.07, so that part needs the larger planned run.")
@@ -718,6 +727,28 @@ para("Two side notes. ChatGPT's impossible-pair rate (39 per cent) falls between
      "measurement, not the model. Within Gemini, its 12 larger images were admitted 58 per cent of the "
      "time against 30 per cent for the small ones.")
 
+doc.add_heading("5.5.2 Flux: a newer open architecture", level=3)
+para("Stable Diffusion 1.5 and SDXL are the same kind of model at two sizes. To see whether a different "
+     "design behaves differently, we added FLUX.1-schnell {c:flux}, a 12 billion parameter "
+     "rectified-flow transformer of the kind described by Esser et al. {c:esser}. It was run on our "
+     "laptop GPU from a 4-bit copy of the weights, on the same 250 line-rich prompts and with the same "
+     "seeds as the Stable Diffusion sets, so the three local models are compared prompt for prompt.")
+para("Flux behaves differently on almost every count (Table 5.2). 78 per cent of its images pass the "
+     "applicability rule, against 37 and 45 per cent for SD 1.5 and SDXL, because it draws clean, "
+     "line-rich scenes. Its median log-focal spread is 0.179 [0.136, 0.299], significantly better than "
+     "both Stable Diffusion models (p = 0.002 and 0.004) and not significantly different from either "
+     "real set (p = 0.18 against York Urban and 0.16 against Commons). This holds under both robustness "
+     "checks (Table 5.3). Only 25 per cent of its images have a nearly level camera, close to real "
+     "photos and far from the 79 to 80 per cent of the Stable Diffusion models, so Flux frames scenes "
+     "more like a photographer does. Its Manhattan residual (1.16 deg) is as good as SDXL's (p = 0.16).")
+para("Two cautions. Not significantly different is not the same as proven equal: the upper end of the "
+     "interval, 0.30, would still be twice the real median, and 48 per cent of Flux images contain an "
+     "impossible pair, more than the hand-picked real set (28 per cent). And per image, Flux is the "
+     "hardest generator for the demonstration application after ChatGPT (Table 5.7). So the scaling "
+     "story needs care. Making the same kind of model bigger did not fix camera coherence, but a newer "
+     "design comes close on this measure. From one model we cannot tell whether that is due to the "
+     "architecture, the training data or the size.")
+
 doc.add_heading("5.6 Where the Inconsistency Lives", level=2)
 para("Two more analyses look at where in the image the problem is. The regional analysis fits a "
      "separate camera inside each cell of an overlapping three by three grid and measures how much the "
@@ -774,18 +805,23 @@ para("Two cautions. On York Urban, camera and content features alone reach about
      "Atlanta measure is only a moderate per-image detector (AUC 0.61 to 0.74), even though it "
      "separates the groups very clearly. It is a strong population test and a weak single-image test.")
 para("The application's calibrated score (Section 4.7) was evaluated the same way. Table 5.7 gives its "
-     "accuracy. Its percentages are well calibrated: images shown at 80 to 100 per cent are AI images "
-     "about 80 per cent of the time, and those shown below 20 per cent about 11 per cent of the time. "
-     "ChatGPT images are the hard case, barely better than guessing per image, which matches the "
-     "finding in Section 5.5.1 that their impossible-pair rate looks like a real photo's.")
+     "accuracy. Its percentages are well calibrated: images shown below 20 per cent are AI images 8 per "
+     "cent of the time, and those shown at 60 to 80 per cent 74 per cent of the time; scores above 80 per "
+     "cent are rare. ChatGPT images are the hard case, barely better than guessing per image, which "
+     "matches the finding in Section 5.5.1 that their impossible-pair rate looks like a real photo's. "
+     "Flux is next, as Section 5.5.2 predicts. Adding Flux to the training data lowered the overall AUC "
+     "from 0.80 to 0.77, which is the honest cost of including the most camera-consistent generator. "
+     "Other classifiers on the same ten features do no better (0.74 to 0.77), and image shape is left "
+     "out on purpose: every generated image here is 4:3, so shape alone would separate the classes "
+     "without any geometry.")
 table(["Measure", "Value"],
-      [["Cross-validated AUC, all admitted images", "0.80"],
-       ["At the 50 per cent line", "78% of AI images flagged; 71% of real photos cleared"],
-       ["AUC, real photos vs SD 1.5 / SDXL / Gemini / ChatGPT", "0.84 / 0.81 / 0.76 / 0.59"],
-       ["AUC on a generator never seen in training, same order", "0.82 / 0.77 / 0.77 / 0.63"]],
+      [["Cross-validated AUC, all admitted images", "0.77"],
+       ["At the 50 per cent line", "78% of AI images flagged; 62% of real photos cleared"],
+       ["AUC, real photos vs SD 1.5 / SDXL / Flux / Gemini / ChatGPT", "0.83 / 0.80 / 0.73 / 0.74 / 0.62"],
+       ["AUC on a generator never seen in training, same order", "0.81 / 0.76 / 0.64 / 0.73 / 0.63"]],
       widths=[3.6, 2.9])
 caption("Table 5.7: Accuracy of the demonstration application's per-image score, five-fold "
-        "cross-validated on 625 admitted images.")
+        "cross-validated on 819 admitted images from two real sets and five generators.")
 
 doc.add_heading("5.8 Shadow Consistency", level=2)
 para("The shadow rule follows the wedge method of Kee, O'Brien and Farid {c:kee}. A shadow point and "
@@ -816,7 +852,8 @@ para("Two lines of evidence stand up cleanly. The Atlanta focal-consistency comp
      "weakness of current generators is not getting the scene's directions right, but committing to one "
      "camera across the whole image. A third line, the classifier, agrees that the camera is the "
      "problem but points at the principal point. A fourth, the regional analysis, agrees in direction "
-     "but rests on an assumption we have not yet checked for generated images.")
+     "but rests on an assumption we have not yet checked for generated images. Flux shows that this "
+     "weakness is not universal: a newer design gets much closer to one camera.")
 para("This is a narrower claim than a quick comparison would give, and it is the one that survives "
      "controlling for content, camera settings and choice of real photos. It also makes sense "
      "mechanically. The direction of a line family can be judged from any small patch of the image, "
@@ -831,18 +868,20 @@ bullet("Evidence that the choice of real photos can flip the direction of a comp
        "warning for the field.")
 bullet("An applicability rule with a non-circularity test, validated against ground truth, that makes "
        "the camera test usable on ordinary photos.")
-bullet("A replicated result that generated images are two and a half to three times worse than real "
-       "photos at camera coherence while matching them on orientation.")
+bullet("A replicated result that Stable Diffusion images are two and a half to three times worse than "
+       "real photos at camera coherence while matching them on orientation.")
 bullet("Evidence that the newest closed models, Gemini and ChatGPT, still fail this test against both "
        "real sets.")
-bullet("Evidence that a bigger model fixes orientation but not camera coherence.")
+bullet("Evidence that a bigger model of the same kind fixes orientation but not camera coherence, while "
+       "a newer architecture, Flux, comes close to real photos on camera coherence.")
 bullet("A working application that applies the method to any image and reports when it cannot.")
 
 doc.add_heading("5.11 Limitations", level=2)
 para("The frontier samples are small (29 and 31 usable images), were made from the less line-rich "
      "prompt set, came at different resolutions, and were generated with settings we cannot see. A "
      "larger run of 250 line-rich prompts per model at full resolution is the next step. The shadow "
-     "rule is not run at scale. Generated images are shrunk to 640 px to match York Urban, and the "
+     "rule is not run at scale. Flux was run once, from a 4-bit copy of the distilled schnell variant, so "
+     "the full-precision and larger Flux models may differ. Generated images are shrunk to 640 px to match York Urban, and the "
      "effect of this on line detection has not been isolated, although the Commons comparison is "
      "resolution-matched and agrees. The regional analysis needs an Atlanta-style local fit. Several "
      "rule levels are not built.")
@@ -873,8 +912,11 @@ table(["Finding", "Evidence"],
         "Concurrency median 1.31 deg; lens distortion and non-box-shaped scenes quantified"],
        ["The choice of real photos can flip the conclusion",
         "Ordinary real photos score worse than generated images on the Manhattan test"],
-       ["Generated images fail camera coherence",
+       ["Stable Diffusion images fail camera coherence",
         "Log-focal spread 0.355 and 0.465 against 0.142 and 0.152 for real; p about 3 × 10⁻⁵"],
+       ["A newer architecture comes close",
+        "Flux 0.179 [0.136, 0.299]: not distinguishable from real (p 0.16 to 0.18), better than both SD "
+        "models (p 0.002 to 0.004); still more impossible pairs than the hand-picked real set"],
        ["The main result is not an artefact",
         "Unchanged when the vertical vanishing point must be away from the centre, and when only clearly "
         "tilted cameras are kept (p 0.008 or less)"],
@@ -889,7 +931,8 @@ table(["Finding", "Evidence"],
         "AUC 0.88 to 0.93 against the hand-picked set and 0.81 to 0.86 in the hardest cases, against "
         "0.88 to 0.94 reported for learned geometric features"],
        ["The method works as a usable tool",
-        "Demonstration app: AUC 0.80, well calibrated, says when it cannot measure an image"]],
+        "Demonstration app: AUC 0.77 over five generators, well calibrated, says when it cannot measure "
+        "an image"]],
       widths=[2.4, 4.1])
 caption("Table 5.8: Summary of the main results.")
 

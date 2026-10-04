@@ -152,16 +152,16 @@ def objective_flowchart(path=RES / "objective_flowchart.png"):
              "VP error 0.3° on synthetic scenes;\nfocal 1.02 × EXIF on real photos"),
             ("Objective 2\nCompare generators with real photos", "#b45f06", "#fce5cd",
              ["Three prompt sets,\ncontent matched by construction",
-              "SD 1.5, SDXL run locally (logged);\nGemini, ChatGPT via their apps",
+              "SD 1.5, SDXL, Flux run locally (logged);\nGemini, ChatGPT via their apps",
               "Same pipeline on every image,\nreal and generated",
               "Bootstrap CIs, Mann-Whitney,\nrobustness checks, classifiers"],
-             "AI focal agreement 2.5 to 3 × worse;\nclassifier AUC up to 0.92"),
+             "SD 2.5 to 3 × worse, Flux close to real;\nclassifier AUC up to 0.92"),
             ("Objective 3\nDemo app with a calibrated score", "#38761d", "#d9ead3",
              ["Any uploaded image",
               "Same per-image code:\n10 geometry measurements",
               "Calibrated random forest\n(never sees pixels)",
               "Score with reasons:\nlines, focal per direction, table"],
-             "Cross-validated AUC 0.80;\ntested on unseen generators")]
+             "Cross-validated AUC 0.77;\ntested on unseen generators")]
     w, gap = 3.9, 0.45
     for c, (head, ec, fc, steps, outcome) in enumerate(cols):
         x = 0.15 + c * (w + gap)
