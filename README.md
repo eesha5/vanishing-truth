@@ -10,7 +10,7 @@ measures whether an image's straight lines are consistent with one pinhole camer
 *which* geometric rule fails and by how much, instead of a black-box "fake" score.
 
 The package is called `projgeo`. It includes the measurement code, the experiment scripts that
-produced every number in the report, and a Streamlit demo app that scores uploaded images.
+produced every result below, and a Streamlit demo app that scores uploaded images.
 
 ## How it works
 
@@ -141,16 +141,8 @@ python scripts/vertical_guard_sensitivity.py --out outputs/vguard
 python scripts/classify_residuals.py --csv results/four_set_summary.csv
 python scripts/train_app_model.py --refresh        # demo app model, about 20 minutes
 python scripts/compare_app_models.py               # other classifiers and the image-shape shortcut
-python scripts/plot_dot_interval.py                # report figures from results/*.csv
-python scripts/make_report_figures.py              # flowchart, example and montage figures
-```
-
-The report and slides are generated from code:
-
-```bash
-pip install -e ".[report]"
-python docs/report/build_report.py
-python docs/report/build_ppt.py
+python scripts/plot_dot_interval.py                # result charts from results/*.csv
+python scripts/make_report_figures.py              # flowcharts, example and montage figures
 ```
 
 ## Repository layout
@@ -170,9 +162,9 @@ projgeo/            the measurement library
 scripts/            experiments; each file's docstring gives its command line
 app/                Streamlit demo app
 models/             trained app model (app_model.joblib)
-results/            committed tables, CSVs and figures used in the report
+results/            committed tables, CSVs and figures behind every result
 tests/              pytest suite (synthetic recovery, geometry, app model)
-docs/               research plan, project notes, report and slide builders
+docs/               research plan
 data/generated/     prompt lists and provenance (images not tracked)
 ```
 
@@ -198,10 +190,8 @@ rule is deliberately broken.
 - R. Hartley and A. Zisserman, *Multiple View Geometry in Computer Vision*, 2nd ed., Cambridge
   University Press, 2004.
 
-The full reference list is in the report.
-
 Wikimedia Commons photographs remain under their own licences. `collect_commons.py` records each
-photo's author and licence in `data/real/commons/metadata.jsonl`; the photos shown in the report
+photo's author and licence in `data/real/commons/metadata.jsonl`; the photos in the montage figure
 are credited in `results/commons_montage_credited.txt`.
 
 ## License

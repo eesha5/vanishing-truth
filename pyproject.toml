@@ -21,7 +21,6 @@ dependencies = [
 
 [project.optional-dependencies]
 app = ["streamlit"]                                   # app/streamlit_app.py
-report = ["python-docx", "python-pptx"]               # docs/report/build_*.py
 generate = ["torch", "diffusers", "transformers", "accelerate"]   # scripts/generate_sdxl.py
 collect = ["requests"]                                # scripts/collect_commons.py
 dev = ["pytest", "ruff"]
