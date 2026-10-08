@@ -1,4 +1,4 @@
-# perspective-can-t-lie
+# vanishing truth
 
 An interpretable framework for analyzing geometric inconsistencies in AI generated images.
 
